@@ -14,6 +14,7 @@ int main() {
     if (!window) {
         std::cerr << "Failed to create GLFW window" << std::endl;
         glfwTerminate();
+        std::cout<<"test";
         return -1;
     }
     glfwMakeContextCurrent(window);
