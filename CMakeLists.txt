@@ -6,7 +6,9 @@ project(MyGLFWProject)
 set(CMAKE_CXX_STANDARD 20)
 find_package(glfw3 REQUIRED)
 find_package(OpenGL REQUIRED)
-add_executable(${PROJECT_NAME} main.cpp)
+add_executable(${PROJECT_NAME} main.cpp
+        Engine.cpp
+        Engine.cuh)
 target_link_libraries(${PROJECT_NAME}
         glfw
         ${OPENGL_LIBRARIES}
