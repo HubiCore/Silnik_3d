@@ -1,3 +1,16 @@
+// Engine.cpp
+
+// Najpierw definiujemy GLEW_STATIC
+#ifndef GLEW_STATIC
+#define GLEW_STATIC
+#endif
+
+// Dolaczamy naglowki we wlasciwej kolejnosci:
+// 1. GLEW
+#include <GL/glew.h>
+// 2. GLFW
+#include <GLFW/glfw3.h>
+
 #include "Engine.hpp"
 #include <iostream>
 #include <chrono>
@@ -48,7 +61,7 @@ Engine::Engine(int width, int height, int fps, bool fullscreen)
       m_lastFrameTime(0.0), m_frameTimeTarget(1.0 / fps),
       m_deltaTime(0.0), m_currentTime(0.0), m_lastTime(0.0) {
 
-    // Domyślny kolor tła
+    // Domyslny kolor tla
     m_clearColor[0] = 0.1f;
     m_clearColor[1] = 0.2f;
     m_clearColor[2] = 0.3f;
@@ -63,14 +76,14 @@ Engine::~Engine() {
 // Inicjalizacja GLFW
 bool Engine::initializeGLFW() {
     if (!glfwInit()) {
-        std::cerr << "Błąd: Nie udało się zainicjalizować GLFW!" << std::endl;
+        std::cerr << "Blad: Nie udalo sie zainicjalizowac GLFW!" << std::endl;
         return false;
     }
 
     // Konfiguracja GLFW
     glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
     glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
-    glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
+    glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_COMPAT_PROFILE);
     glfwWindowHint(GLFW_RESIZABLE, GL_TRUE);
     glfwWindowHint(GLFW_DOUBLEBUFFER, m_enableDoubleBuffering ? GL_TRUE : GL_FALSE);
 
@@ -78,7 +91,7 @@ bool Engine::initializeGLFW() {
     glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);
 #endif
 
-    std::cout << "GLFW zainicjalizowane pomyślnie" << std::endl;
+    std::cout << "GLFW zainicjalizowane pomyslnie" << std::endl;
     return true;
 }
 
@@ -99,18 +112,32 @@ bool Engine::createWindow() {
     }
 
     if (!m_window) {
-        std::cerr << "Błąd: Nie udało się utworzyć okna GLFW!" << std::endl;
+        std::cerr << "Blad: Nie udalo sie utworzyc okna GLFW!" << std::endl;
         glfwTerminate();
         return false;
     }
 
     glfwMakeContextCurrent(m_window);
+
+    // Inicjalizacja GLEW PO utworzeniu kontekstu OpenGL
+    glewExperimental = GL_TRUE;
+    GLenum err = glewInit();
+    if (err != GLEW_OK) {
+        std::cerr << "Blad inicjalizacji GLEW: " << glewGetErrorString(err) << std::endl;
+        glfwTerminate();
+        return false;
+    }
+
+    // Sprawdz wersje OpenGL
+    std::cout << "OpenGL: " << glGetString(GL_VERSION) << std::endl;
+    std::cout << "GLEW: " << glewGetString(GLEW_VERSION) << std::endl;
+
     glfwSwapInterval(1); // V-Sync
 
     return true;
 }
 
-// Ustawienie callbacków
+// Ustawienie callbackow
 void Engine::setupCallbacks() {
     glfwSetWindowUserPointer(m_window, this);
     glfwSetKeyCallback(m_window, keyCallbackWrapper);
@@ -124,7 +151,7 @@ void Engine::setupOpenGL() {
     // Ustawienie koloru czyszczenia
     glClearColor(m_clearColor[0], m_clearColor[1], m_clearColor[2], m_clearColor[3]);
 
-    // Bufor głębokości (Z-buffer)
+    // Bufor glebokosci (Z-buffer)
     if (m_enableDepthBuffer) {
         glEnable(GL_DEPTH_TEST);
         glDepthFunc(GL_LESS);
@@ -134,12 +161,12 @@ void Engine::setupOpenGL() {
     glEnable(GL_CULL_FACE);
     glCullFace(GL_BACK);
 
-    // Przezroczystość
+    // Przezroczystosc
     glEnable(GL_BLEND);
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 }
 
-// Główna inicjalizacja
+// Glowna inicjalizacja
 bool Engine::initialize() {
     if (!initializeGLFW()) {
         return false;
@@ -155,15 +182,15 @@ bool Engine::initialize() {
     m_lastFrameTime = glfwGetTime();
     m_isRunning = true;
 
-    std::cout << "Silnik 3D zainicjalizowany pomyślnie" << std::endl;
-    std::cout << "Rozdzielczość: " << m_resX << "x" << m_resY << std::endl;
+    std::cout << "Silnik 3D zainicjalizowany pomyslnie" << std::endl;
+    std::cout << "Rozdzielczosc: " << m_resX << "x" << m_resY << std::endl;
     std::cout << "Celowe FPS: " << m_targetFPS << std::endl;
-    std::cout << "Tryb pełnoekranowy: " << (m_isFullscreen ? "Tak" : "Nie") << std::endl;
+    std::cout << "Tryb pelnoekranowy: " << (m_isFullscreen ? "Tak" : "Nie") << std::endl;
 
     return true;
 }
 
-// Główna pętla gry
+// Glowna petla gry
 void Engine::run(std::function<void()> updateCallback, std::function<void()> renderCallback) {
     if (!m_window || !m_isRunning) return;
 
@@ -173,7 +200,7 @@ void Engine::run(std::function<void()> updateCallback, std::function<void()> ren
         m_deltaTime = m_currentTime - m_lastTime;
         m_lastTime = m_currentTime;
 
-        // Sprawdzenie, czy nadszedł czas na następną klatkę
+        // Sprawdzenie, czy nadszedl czas na nastepna klatke
         double currentTime = glfwGetTime();
         double elapsed = currentTime - m_lastFrameTime;
 
@@ -194,13 +221,13 @@ void Engine::run(std::function<void()> updateCallback, std::function<void()> ren
                 renderCallback();
             }
 
-            // Zamiana buforów i obsługa zdarzeń
+            // Zamiana buforow i obsluga zdarzen
             swapBuffers();
             pollEvents();
 
             m_lastFrameTime = currentTime;
         } else {
-            // Uśpienie dla utrzymania docelowego FPS
+            // Uspienie dla utrzymania docelowego FPS
             double sleepTime = (m_frameTimeTarget - elapsed) * 1000.0;
             if (sleepTime > 0) {
                 std::this_thread::sleep_for(std::chrono::milliseconds(static_cast<int>(sleepTime)));
@@ -211,42 +238,42 @@ void Engine::run(std::function<void()> updateCallback, std::function<void()> ren
     close();
 }
 
-// Zamknięcie silnika
+// Zamkniecie silnika
 void Engine::close() {
     m_isRunning = false;
 
     if (m_window) {
         glfwDestroyWindow(m_window);
         m_window = nullptr;
-        std::cout << "Okno zamknięte" << std::endl;
+        std::cout << "Okno zamkniete" << std::endl;
     }
 
     glfwTerminate();
-    std::cout << "GLFW zakończone" << std::endl;
+    std::cout << "GLFW zakonczone" << std::endl;
 }
 
-// Ustawienie trybu pełnoekranowego
+// Ustawienie trybu pelnoekranowego
 void Engine::setFullscreen(bool fullscreen) {
     if (fullscreen == m_isFullscreen || !m_window) return;
 
     m_isFullscreen = fullscreen;
 
     if (fullscreen) {
-        // Przejście do pełnego ekranu
+        // Przejscie do pelnego ekranu
         glfwSetWindowMonitor(m_window, m_monitor, 0, 0,
                             m_videoMode->width, m_videoMode->height,
                             m_videoMode->refreshRate);
         m_resX = m_videoMode->width;
         m_resY = m_videoMode->height;
     } else {
-        // Przejście do okna
+        // Przejscie do okna
         int xPos = 100;
         int yPos = 100;
         glfwSetWindowMonitor(m_window, nullptr, xPos, yPos, m_resX, m_resY, 0);
     }
 }
 
-// Zmiana rozdzielczości
+// Zmiana rozdzielczosci
 void Engine::setResolution(int width, int height) {
     if (!m_window) return;
 
@@ -267,16 +294,16 @@ void Engine::setFPS(int fps) {
     m_frameTimeTarget = 1.0 / fps;
 }
 
-// Włączenie/wyłączenie podwójnego buforowania
+// Wlaczenie/wylaczenie podwojnego buforowania
 void Engine::enableDoubleBuffering(bool enable) {
     m_enableDoubleBuffering = enable;
     if (m_window) {
-        // Należy ponownie utworzyć okno, aby zmienić to ustawienie
+        // Nalezy ponownie utworzyc okno, aby zmienic to ustawienie
         std::cout << "Uwaga: Zmiana wymaga ponownego utworzenia okna" << std::endl;
     }
 }
 
-// Włączenie/wyłączenie bufora głębokości
+// Wlaczenie/wylaczenie bufora glebokosci
 void Engine::enableDepthBuffer(bool enable) {
     m_enableDepthBuffer = enable;
     if (m_window) {
@@ -298,7 +325,7 @@ void Engine::setMouseMoveCallback(std::function<void(GLFWwindow*, double, double
     m_mouseMoveCallback = callback;
 }
 
-// Ustawienie callbacka przycisków myszy
+// Ustawienie callbacka przyciskow myszy
 void Engine::setMouseButtonCallback(std::function<void(GLFWwindow*, int, int, int)> callback) {
     m_mouseButtonCallback = callback;
 }
@@ -339,31 +366,29 @@ void Engine::setOrthographicProjection(float left, float right, float bottom, fl
     m_projectionMode = ProjectionMode::ORTHOGRAPHIC;
     m_nearPlane = near;
     m_farPlane = far;
-    // W rzeczywistej implementacji należy przechowywać parametry
 }
 
 // Zastosowanie rzutowania
 void Engine::applyProjection() {
-    // Implementacja zależna od wybranej biblioteki matematycznej
-    // Np. przy użyciu GLM lub własnych macierzy
+    // Tymczasowo puste - implementacja zalezy od tego, jak zarzadzasz macierzami
 }
 
-// Sprawdzenie, czy okno powinno zostać zamknięte
+// Sprawdzenie, czy okno powinno zostac zamkniete
 bool Engine::shouldClose() const {
     return glfwWindowShouldClose(m_window) || !m_isRunning;
 }
 
-// Pobranie wskaźnika do okna
+// Pobranie wskaznika do okna
 GLFWwindow* Engine::getWindow() const {
     return m_window;
 }
 
-// Zamiana buforów
+// Zamiana buforow
 void Engine::swapBuffers() {
     glfwSwapBuffers(m_window);
 }
 
-// Obsługa zdarzeń
+// Obsluga zdarzen
 void Engine::pollEvents() {
     glfwPollEvents();
 }
@@ -375,7 +400,7 @@ void Engine::setCursorMode(int mode) {
     }
 }
 
-// Włączenie/wyłączenie obsługi myszy
+// Wlaczenie/wylaczenie obslugi myszy
 void Engine::enableMouseInput(bool enable) {
     if (m_window) {
         glfwSetInputMode(m_window, GLFW_CURSOR,

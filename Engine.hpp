@@ -1,12 +1,28 @@
+// Engine.hpp
 #ifndef ENGINE_HPP
 #define ENGINE_HPP
 
-#include <GLFW/glfw3.h>
-#include <functional>
-#include <memory>
+// WAŻNE: Najpierw definiujemy GLEW_STATIC
+#ifndef GLEW_STATIC
+#define GLEW_STATIC
+#endif
 
-// Forward declarations for friend functions
-class Engine;
+// Najpierw dołączamy GLEW (musi być przed OpenGL)
+#include <GL/glew.h>
+
+// Następnie definiujemy GLFW_INCLUDE_NONE, aby GLFW nie dołączało OpenGL
+#define GLFW_INCLUDE_NONE
+
+// Teraz dołączamy GLFW
+#include <GLFW/glfw3.h>
+
+#include <functional>
+
+// Mode rzutowania
+enum class ProjectionMode {
+    PERSPECTIVE,
+    ORTHOGRAPHIC
+};
 
 // Wrapper function declarations
 void keyCallbackWrapper(GLFWwindow* window, int key, int scancode, int action, int mods);
@@ -36,7 +52,7 @@ private:
 
     // Ustawienia graficzne
     float m_clearColor[4];
-    enum class ProjectionMode { PERSPECTIVE, ORTHOGRAPHIC } m_projectionMode;
+    ProjectionMode m_projectionMode;
     float m_fov;
     float m_nearPlane;
     float m_farPlane;
