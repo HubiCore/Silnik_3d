@@ -6,6 +6,8 @@
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
 
+
+
 #define PI 3.14159265358979323846f
 
 GeometryRenderer::GeometryRenderer() : m_drawMode(GL_TRIANGLES) {
@@ -32,7 +34,7 @@ GeometryRenderer::~GeometryRenderer() {
 }
 
 bool GeometryRenderer::initialize() {
-    // Inicjalizacja GLEW
+    // Inicjalizacja GLEW (jeśli potrzebne)
     glewExperimental = GL_TRUE;
     GLenum err = glewInit();
     if (err != GLEW_OK) {
@@ -50,9 +52,10 @@ bool GeometryRenderer::initialize() {
     createPyramid();
     createGrid();
 
-    // Inicjalizacja buforów
+    // Inicjalizacja buforów dla linii i punktów
     glGenVertexArrays(1, &m_lineVAO);
     glGenBuffers(1, &m_lineVBO);
+
     glGenVertexArrays(1, &m_pointVAO);
     glGenBuffers(1, &m_pointVBO);
 
@@ -60,11 +63,7 @@ bool GeometryRenderer::initialize() {
     return true;
 }
 
-void GeometryRenderer::setupMesh(Mesh& mesh, const std::vector<Vertex>& vertices,
-                                 const std::vector<unsigned int>& indices) {
-    mesh.vertices = vertices;      // Zapisanie wierzchołków
-    mesh.indices = indices;        // Zapisanie indeksów
-
+void GeometryRenderer::setupMesh(Mesh& mesh, const std::vector<Vertex>& vertices, const std::vector<unsigned int>& indices) {
     glGenVertexArrays(1, &mesh.VAO);
     glGenBuffers(1, &mesh.VBO);
     glGenBuffers(1, &mesh.EBO);
@@ -73,33 +72,24 @@ void GeometryRenderer::setupMesh(Mesh& mesh, const std::vector<Vertex>& vertices
 
     // Wierzchołki
     glBindBuffer(GL_ARRAY_BUFFER, mesh.VBO);
-    glBufferData(GL_ARRAY_BUFFER, vertices.size() * sizeof(Vertex),
-                 &vertices[0], GL_STATIC_DRAW);
+    glBufferData(GL_ARRAY_BUFFER, vertices.size() * sizeof(Vertex), &vertices[0], GL_STATIC_DRAW);
 
     // Indeksy
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, mesh.EBO);
-    glBufferData(GL_ELEMENT_ARRAY_BUFFER, indices.size() * sizeof(unsigned int),
-                 &indices[0], GL_STATIC_DRAW);
+    glBufferData(GL_ELEMENT_ARRAY_BUFFER, indices.size() * sizeof(unsigned int), &indices[0], GL_STATIC_DRAW);
 
-    // Atrybuty wierzchołków - ZGODNE Z RYS. 8-10
-    // Pozycja (atrybut 0)
+    // Atrybuty wierzchołków
+    // Pozycja
     glEnableVertexAttribArray(0);
     glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)0);
 
-    // Normalna (atrybut 1)
+    // Normalna
     glEnableVertexAttribArray(1);
-    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex),
-                         (void*)offsetof(Vertex, normal));
+    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)offsetof(Vertex, normal));
 
-    // Kolor (atrybut 2) - DODANE!
+    // Koordynaty tekstury
     glEnableVertexAttribArray(2);
-    glVertexAttribPointer(2, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex),
-                         (void*)offsetof(Vertex, color));
-
-    // Koordynaty tekstury (atrybut 3)
-    glEnableVertexAttribArray(3);
-    glVertexAttribPointer(3, 2, GL_FLOAT, GL_FALSE, sizeof(Vertex),
-                         (void*)offsetof(Vertex, texCoord));
+    glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)offsetof(Vertex, texCoord));
 
     glBindVertexArray(0);
     mesh.indexCount = static_cast<int>(indices.size());
@@ -112,46 +102,44 @@ void GeometryRenderer::deleteMesh(Mesh& mesh) {
 }
 
 void GeometryRenderer::createCube() {
-    std::vector<Vertex> vertices;
+    std::vector<Vertex> vertices = {
+        // Front
+        {{-0.5f, -0.5f,  0.5f}, {0.0f, 0.0f, 1.0f}, {0.0f, 0.0f}},
+        {{ 0.5f, -0.5f,  0.5f}, {0.0f, 0.0f, 1.0f}, {1.0f, 0.0f}},
+        {{ 0.5f,  0.5f,  0.5f}, {0.0f, 0.0f, 1.0f}, {1.0f, 1.0f}},
+        {{-0.5f,  0.5f,  0.5f}, {0.0f, 0.0f, 1.0f}, {0.0f, 1.0f}},
 
-    // Definicja wierzchołków z kolorami - ZGODNE Z RYS. 8
-    // Front (czerwony)
-    vertices.push_back({{-0.5f, -0.5f,  0.5f}, {0.0f, 0.0f, 1.0f}, {1.0f, 0.3f, 0.3f}, {0.0f, 0.0f}});
-    vertices.push_back({{ 0.5f, -0.5f,  0.5f}, {0.0f, 0.0f, 1.0f}, {1.0f, 0.3f, 0.3f}, {1.0f, 0.0f}});
-    vertices.push_back({{ 0.5f,  0.5f,  0.5f}, {0.0f, 0.0f, 1.0f}, {1.0f, 0.3f, 0.3f}, {1.0f, 1.0f}});
-    vertices.push_back({{-0.5f,  0.5f,  0.5f}, {0.0f, 0.0f, 1.0f}, {1.0f, 0.3f, 0.3f}, {0.0f, 1.0f}});
+        // Back
+        {{-0.5f, -0.5f, -0.5f}, {0.0f, 0.0f, -1.0f}, {1.0f, 0.0f}},
+        {{-0.5f,  0.5f, -0.5f}, {0.0f, 0.0f, -1.0f}, {1.0f, 1.0f}},
+        {{ 0.5f,  0.5f, -0.5f}, {0.0f, 0.0f, -1.0f}, {0.0f, 1.0f}},
+        {{ 0.5f, -0.5f, -0.5f}, {0.0f, 0.0f, -1.0f}, {0.0f, 0.0f}},
 
-    // Back (żółty)
-    vertices.push_back({{-0.5f, -0.5f, -0.5f}, {0.0f, 0.0f, -1.0f}, {1.0f, 1.0f, 0.3f}, {1.0f, 0.0f}});
-    vertices.push_back({{-0.5f,  0.5f, -0.5f}, {0.0f, 0.0f, -1.0f}, {1.0f, 1.0f, 0.3f}, {1.0f, 1.0f}});
-    vertices.push_back({{ 0.5f,  0.5f, -0.5f}, {0.0f, 0.0f, -1.0f}, {1.0f, 1.0f, 0.3f}, {0.0f, 1.0f}});
-    vertices.push_back({{ 0.5f, -0.5f, -0.5f}, {0.0f, 0.0f, -1.0f}, {1.0f, 1.0f, 0.3f}, {0.0f, 0.0f}});
+        // Top
+        {{-0.5f,  0.5f, -0.5f}, {0.0f, 1.0f, 0.0f}, {0.0f, 1.0f}},
+        {{-0.5f,  0.5f,  0.5f}, {0.0f, 1.0f, 0.0f}, {0.0f, 0.0f}},
+        {{ 0.5f,  0.5f,  0.5f}, {0.0f, 1.0f, 0.0f}, {1.0f, 0.0f}},
+        {{ 0.5f,  0.5f, -0.5f}, {0.0f, 1.0f, 0.0f}, {1.0f, 1.0f}},
 
-    // Top (zielony)
-    vertices.push_back({{-0.5f,  0.5f, -0.5f}, {0.0f, 1.0f, 0.0f}, {0.3f, 1.0f, 0.3f}, {0.0f, 1.0f}});
-    vertices.push_back({{-0.5f,  0.5f,  0.5f}, {0.0f, 1.0f, 0.0f}, {0.3f, 1.0f, 0.3f}, {0.0f, 0.0f}});
-    vertices.push_back({{ 0.5f,  0.5f,  0.5f}, {0.0f, 1.0f, 0.0f}, {0.3f, 1.0f, 0.3f}, {1.0f, 0.0f}});
-    vertices.push_back({{ 0.5f,  0.5f, -0.5f}, {0.0f, 1.0f, 0.0f}, {0.3f, 1.0f, 0.3f}, {1.0f, 1.0f}});
+        // Bottom
+        {{-0.5f, -0.5f, -0.5f}, {0.0f, -1.0f, 0.0f}, {1.0f, 1.0f}},
+        {{ 0.5f, -0.5f, -0.5f}, {0.0f, -1.0f, 0.0f}, {0.0f, 1.0f}},
+        {{ 0.5f, -0.5f,  0.5f}, {0.0f, -1.0f, 0.0f}, {0.0f, 0.0f}},
+        {{-0.5f, -0.5f,  0.5f}, {0.0f, -1.0f, 0.0f}, {1.0f, 0.0f}},
 
-    // Bottom (niebieski)
-    vertices.push_back({{-0.5f, -0.5f, -0.5f}, {0.0f, -1.0f, 0.0f}, {0.3f, 0.3f, 1.0f}, {1.0f, 1.0f}});
-    vertices.push_back({{ 0.5f, -0.5f, -0.5f}, {0.0f, -1.0f, 0.0f}, {0.3f, 0.3f, 1.0f}, {0.0f, 1.0f}});
-    vertices.push_back({{ 0.5f, -0.5f,  0.5f}, {0.0f, -1.0f, 0.0f}, {0.3f, 0.3f, 1.0f}, {0.0f, 0.0f}});
-    vertices.push_back({{-0.5f, -0.5f,  0.5f}, {0.0f, -1.0f, 0.0f}, {0.3f, 0.3f, 1.0f}, {1.0f, 0.0f}});
+        // Right
+        {{ 0.5f, -0.5f, -0.5f}, {1.0f, 0.0f, 0.0f}, {1.0f, 0.0f}},
+        {{ 0.5f,  0.5f, -0.5f}, {1.0f, 0.0f, 0.0f}, {1.0f, 1.0f}},
+        {{ 0.5f,  0.5f,  0.5f}, {1.0f, 0.0f, 0.0f}, {0.0f, 1.0f}},
+        {{ 0.5f, -0.5f,  0.5f}, {1.0f, 0.0f, 0.0f}, {0.0f, 0.0f}},
 
-    // Right (różowy)
-    vertices.push_back({{ 0.5f, -0.5f, -0.5f}, {1.0f, 0.0f, 0.0f}, {1.0f, 0.3f, 1.0f}, {1.0f, 0.0f}});
-    vertices.push_back({{ 0.5f,  0.5f, -0.5f}, {1.0f, 0.0f, 0.0f}, {1.0f, 0.3f, 1.0f}, {1.0f, 1.0f}});
-    vertices.push_back({{ 0.5f,  0.5f,  0.5f}, {1.0f, 0.0f, 0.0f}, {1.0f, 0.3f, 1.0f}, {0.0f, 1.0f}});
-    vertices.push_back({{ 0.5f, -0.5f,  0.5f}, {1.0f, 0.0f, 0.0f}, {1.0f, 0.3f, 1.0f}, {0.0f, 0.0f}});
+        // Left
+        {{-0.5f, -0.5f, -0.5f}, {-1.0f, 0.0f, 0.0f}, {0.0f, 0.0f}},
+        {{-0.5f, -0.5f,  0.5f}, {-1.0f, 0.0f, 0.0f}, {1.0f, 0.0f}},
+        {{-0.5f,  0.5f,  0.5f}, {-1.0f, 0.0f, 0.0f}, {1.0f, 1.0f}},
+        {{-0.5f,  0.5f, -0.5f}, {-1.0f, 0.0f, 0.0f}, {0.0f, 1.0f}}
+    };
 
-    // Left (cyjan)
-    vertices.push_back({{-0.5f, -0.5f, -0.5f}, {-1.0f, 0.0f, 0.0f}, {0.3f, 1.0f, 1.0f}, {0.0f, 0.0f}});
-    vertices.push_back({{-0.5f, -0.5f,  0.5f}, {-1.0f, 0.0f, 0.0f}, {0.3f, 1.0f, 1.0f}, {1.0f, 0.0f}});
-    vertices.push_back({{-0.5f,  0.5f,  0.5f}, {-1.0f, 0.0f, 0.0f}, {0.3f, 1.0f, 1.0f}, {1.0f, 1.0f}});
-    vertices.push_back({{-0.5f,  0.5f, -0.5f}, {-1.0f, 0.0f, 0.0f}, {0.3f, 1.0f, 1.0f}, {0.0f, 1.0f}});
-
-    // Indeksy - ZGODNE Z RYS. 9
     std::vector<unsigned int> indices = {
         0, 1, 2, 2, 3, 0,    // Front
         4, 5, 6, 6, 7, 4,    // Back
@@ -185,8 +173,6 @@ void GeometryRenderer::createSphere(int sectors, int stacks) {
             Vertex vertex;
             vertex.position = glm::vec3(x, y, z);
             vertex.normal = glm::vec3(x, y, z);
-            // Kolory w zależności od pozycji
-            vertex.color = glm::vec3((x + 1.0f) / 2.0f, (y + 1.0f) / 2.0f, (z + 1.0f) / 2.0f);
             vertex.texCoord = glm::vec2((float)j / sectors, (float)i / stacks);
 
             vertices.push_back(vertex);
@@ -222,9 +208,9 @@ void GeometryRenderer::createCylinder(int sectors) {
     float sectorStep = 2 * PI / sectors;
 
     // Środek góry
-    vertices.push_back({{0.0f, 0.5f, 0.0f}, {0.0f, 1.0f, 0.0f}, {1.0f, 1.0f, 1.0f}, {0.5f, 0.5f}});
+    vertices.push_back({{0.0f, 0.5f, 0.0f}, {0.0f, 1.0f, 0.0f}, {0.5f, 0.5f}});
     // Środek dołu
-    vertices.push_back({{0.0f, -0.5f, 0.0f}, {0.0f, -1.0f, 0.0f}, {0.5f, 0.5f, 0.5f}, {0.5f, 0.5f}});
+    vertices.push_back({{0.0f, -0.5f, 0.0f}, {0.0f, -1.0f, 0.0f}, {0.5f, 0.5f}});
 
     for (int i = 0; i <= sectors; ++i) {
         float angle = i * sectorStep;
@@ -232,13 +218,13 @@ void GeometryRenderer::createCylinder(int sectors) {
         float z = sinf(angle);
 
         // Górna podstawa
-        vertices.push_back({{x, 0.5f, z}, {0.0f, 1.0f, 0.0f}, {0.8f, 0.2f, 0.2f}, {x * 0.5f + 0.5f, z * 0.5f + 0.5f}});
+        vertices.push_back({{x, 0.5f, z}, {0.0f, 1.0f, 0.0f}, {x * 0.5f + 0.5f, z * 0.5f + 0.5f}});
         // Dolna podstawa
-        vertices.push_back({{x, -0.5f, z}, {0.0f, -1.0f, 0.0f}, {0.2f, 0.2f, 0.8f}, {x * 0.5f + 0.5f, z * 0.5f + 0.5f}});
+        vertices.push_back({{x, -0.5f, z}, {0.0f, -1.0f, 0.0f}, {x * 0.5f + 0.5f, z * 0.5f + 0.5f}});
         // Ściana górna
-        vertices.push_back({{x, 0.5f, z}, {x, 0.0f, z}, {0.2f, 0.8f, 0.2f}, {static_cast<float>(i) / sectors, 1.0f}});
+        vertices.push_back({{x, 0.5f, z}, {x, 0.0f, z}, {static_cast<float>(i) / sectors, 1.0f}});
         // Ściana dolna
-        vertices.push_back({{x, -0.5f, z}, {x, 0.0f, z}, {0.8f, 0.8f, 0.2f}, {static_cast<float>(i) / sectors, 0.0f}});
+        vertices.push_back({{x, -0.5f, z}, {x, 0.0f, z}, {static_cast<float>(i) / sectors, 0.0f}});
     }
 
     // Górna podstawa
@@ -281,9 +267,9 @@ void GeometryRenderer::createCone(int sectors) {
     float sectorStep = 2 * PI / sectors;
 
     // Wierzchołek stożka
-    vertices.push_back({{0.0f, 0.5f, 0.0f}, {0.0f, 1.0f, 0.0f}, {1.0f, 1.0f, 1.0f}, {0.5f, 0.5f}});
+    vertices.push_back({{0.0f, 0.5f, 0.0f}, {0.0f, 1.0f, 0.0f}, {0.5f, 0.5f}});
     // Środek podstawy
-    vertices.push_back({{0.0f, -0.5f, 0.0f}, {0.0f, -1.0f, 0.0f}, {0.5f, 0.5f, 0.5f}, {0.5f, 0.5f}});
+    vertices.push_back({{0.0f, -0.5f, 0.0f}, {0.0f, -1.0f, 0.0f}, {0.5f, 0.5f}});
 
     for (int i = 0; i <= sectors; ++i) {
         float angle = i * sectorStep;
@@ -291,12 +277,12 @@ void GeometryRenderer::createCone(int sectors) {
         float z = sinf(angle);
 
         // Podstawa
-        vertices.push_back({{x, -0.5f, z}, {0.0f, -1.0f, 0.0f}, {0.6f, 0.3f, 0.9f}, {x * 0.5f + 0.5f, z * 0.5f + 0.5f}});
+        vertices.push_back({{x, -0.5f, z}, {0.0f, -1.0f, 0.0f}, {x * 0.5f + 0.5f, z * 0.5f + 0.5f}});
 
         // Ściana
         glm::vec3 normal = glm::normalize(glm::vec3(x, 0.25f, z));
-        vertices.push_back({{x, -0.5f, z}, normal, {0.9f, 0.6f, 0.3f}, {static_cast<float>(i) / sectors, 0.0f}});
-        vertices.push_back({{0.0f, 0.5f, 0.0f}, normal, {0.3f, 0.9f, 0.6f}, {static_cast<float>(i) / sectors, 1.0f}});
+        vertices.push_back({{x, -0.5f, z}, normal, {static_cast<float>(i) / sectors, 0.0f}});
+        vertices.push_back({{0.0f, 0.5f, 0.0f}, normal, {static_cast<float>(i) / sectors, 1.0f}});
     }
 
     // Podstawa
@@ -318,10 +304,10 @@ void GeometryRenderer::createCone(int sectors) {
 
 void GeometryRenderer::createPlane() {
     std::vector<Vertex> vertices = {
-        {{-0.5f, 0.0f, -0.5f}, {0.0f, 1.0f, 0.0f}, {0.3f, 0.7f, 0.3f}, {0.0f, 0.0f}},
-        {{ 0.5f, 0.0f, -0.5f}, {0.0f, 1.0f, 0.0f}, {0.3f, 0.7f, 0.3f}, {1.0f, 0.0f}},
-        {{ 0.5f, 0.0f,  0.5f}, {0.0f, 1.0f, 0.0f}, {0.3f, 0.7f, 0.3f}, {1.0f, 1.0f}},
-        {{-0.5f, 0.0f,  0.5f}, {0.0f, 1.0f, 0.0f}, {0.3f, 0.7f, 0.3f}, {0.0f, 1.0f}}
+        {{-0.5f, 0.0f, -0.5f}, {0.0f, 1.0f, 0.0f}, {0.0f, 0.0f}},
+        {{ 0.5f, 0.0f, -0.5f}, {0.0f, 1.0f, 0.0f}, {1.0f, 0.0f}},
+        {{ 0.5f, 0.0f,  0.5f}, {0.0f, 1.0f, 0.0f}, {1.0f, 1.0f}},
+        {{-0.5f, 0.0f,  0.5f}, {0.0f, 1.0f, 0.0f}, {0.0f, 1.0f}}
     };
 
     std::vector<unsigned int> indices = {
@@ -357,11 +343,6 @@ void GeometryRenderer::createTorus(float radius, float tubeRadius, int sectors, 
             vertex.normal.y = sinRing * cosSector;
             vertex.normal.z = sinSector;
 
-            // Kolory w zależności od pozycji
-            vertex.color.r = 0.5f + 0.5f * cosSector;
-            vertex.color.g = 0.5f + 0.5f * sinSector;
-            vertex.color.b = 0.5f + 0.5f * cosRing;
-
             vertex.texCoord.x = static_cast<float>(j) / sectors;
             vertex.texCoord.y = static_cast<float>(i) / rings;
 
@@ -389,14 +370,14 @@ void GeometryRenderer::createTorus(float radius, float tubeRadius, int sectors, 
 
 void GeometryRenderer::createPyramid() {
     std::vector<Vertex> vertices = {
-        // Podstawa (niebieska)
-        {{-0.5f, -0.5f, -0.5f}, {0.0f, -1.0f, 0.0f}, {0.2f, 0.2f, 0.8f}, {0.0f, 0.0f}},
-        {{ 0.5f, -0.5f, -0.5f}, {0.0f, -1.0f, 0.0f}, {0.2f, 0.2f, 0.8f}, {1.0f, 0.0f}},
-        {{ 0.5f, -0.5f,  0.5f}, {0.0f, -1.0f, 0.0f}, {0.2f, 0.2f, 0.8f}, {1.0f, 1.0f}},
-        {{-0.5f, -0.5f,  0.5f}, {0.0f, -1.0f, 0.0f}, {0.2f, 0.2f, 0.8f}, {0.0f, 1.0f}},
+        // Podstawa
+        {{-0.5f, -0.5f, -0.5f}, {0.0f, -1.0f, 0.0f}, {0.0f, 0.0f}},
+        {{ 0.5f, -0.5f, -0.5f}, {0.0f, -1.0f, 0.0f}, {1.0f, 0.0f}},
+        {{ 0.5f, -0.5f,  0.5f}, {0.0f, -1.0f, 0.0f}, {1.0f, 1.0f}},
+        {{-0.5f, -0.5f,  0.5f}, {0.0f, -1.0f, 0.0f}, {0.0f, 1.0f}},
 
-        // Wierzchołek (czerwony)
-        {{ 0.0f,  0.5f,  0.0f}, {0.0f, 1.0f, 0.0f}, {0.8f, 0.2f, 0.2f}, {0.5f, 1.0f}},
+        // Wierzchołek
+        {{ 0.0f,  0.5f,  0.0f}, {0.0f, 1.0f, 0.0f}, {0.5f, 1.0f}},
     };
 
     std::vector<unsigned int> indices = {
@@ -421,17 +402,17 @@ void GeometryRenderer::createGrid(int size) {
 
     // Linie poziome i pionowe
     for (int i = -halfSize; i <= halfSize; ++i) {
-        // Linie poziome (szare)
+        // Linie poziome
         vertices.push_back({{static_cast<float>(-halfSize), 0.0f, static_cast<float>(i)},
-                           {0.0f, 1.0f, 0.0f}, {0.5f, 0.5f, 0.5f}, {0.0f, 0.0f}});
+                           {0.0f, 1.0f, 0.0f}, {0.0f, 0.0f}});
         vertices.push_back({{static_cast<float>(halfSize), 0.0f, static_cast<float>(i)},
-                           {0.0f, 1.0f, 0.0f}, {0.5f, 0.5f, 0.5f}, {1.0f, 0.0f}});
+                           {0.0f, 1.0f, 0.0f}, {1.0f, 0.0f}});
 
-        // Linie pionowe (szare)
+        // Linie pionowe
         vertices.push_back({{static_cast<float>(i), 0.0f, static_cast<float>(-halfSize)},
-                           {0.0f, 1.0f, 0.0f}, {0.5f, 0.5f, 0.5f}, {0.0f, 0.0f}});
+                           {0.0f, 1.0f, 0.0f}, {0.0f, 0.0f}});
         vertices.push_back({{static_cast<float>(i), 0.0f, static_cast<float>(halfSize)},
-                           {0.0f, 1.0f, 0.0f}, {0.5f, 0.5f, 0.5f}, {1.0f, 0.0f}});
+                           {0.0f, 1.0f, 0.0f}, {1.0f, 0.0f}});
     }
 
     for (unsigned int i = 0; i < vertices.size(); ++i) {
@@ -441,180 +422,6 @@ void GeometryRenderer::createGrid(int size) {
     setupMesh(m_gridMesh, vertices, indices);
 }
 
-// NOWE FUNKCJE DLA ZADAŃ Z INSTRUKCJI
-
-void GeometryRenderer::drawIndexedCube() {
-    std::cout << "Rysowanie indeksowanego sześcianu (Zadanie 2)" << std::endl;
-
-    // Wykorzystanie istniejącej siatki
-    glBindVertexArray(m_cubeMesh.VAO);
-    glDrawElements(GL_TRIANGLES, m_cubeMesh.indexCount, GL_UNSIGNED_INT, 0);
-    glBindVertexArray(0);
-}
-
-void GeometryRenderer::drawComplexObject() {
-    std::cout << "Rysowanie obiektu złożonego: litera A (Zadanie 3)" << std::endl;
-
-    // Definicja wierzchołków litery A
-    std::vector<Vertex> vertices = {
-        // Podstawa A
-        {{-0.3f, -0.5f, 0.0f}, {0.0f, 0.0f, 1.0f}, {1.0f, 0.0f, 0.0f}, {0.0f, 0.0f}},
-        {{-0.1f, 0.5f, 0.0f}, {0.0f, 0.0f, 1.0f}, {0.0f, 1.0f, 0.0f}, {0.5f, 1.0f}},
-        {{0.1f, 0.5f, 0.0f}, {0.0f, 0.0f, 1.0f}, {0.0f, 1.0f, 0.0f}, {0.5f, 1.0f}},
-        {{0.3f, -0.5f, 0.0f}, {0.0f, 0.0f, 1.0f}, {1.0f, 0.0f, 0.0f}, {1.0f, 0.0f}},
-        {{-0.2f, 0.0f, 0.0f}, {0.0f, 0.0f, 1.0f}, {0.0f, 0.0f, 1.0f}, {0.3f, 0.5f}},
-        {{0.2f, 0.0f, 0.0f}, {0.0f, 0.0f, 1.0f}, {0.0f, 0.0f, 1.0f}, {0.7f, 0.5f}}
-    };
-
-    std::vector<unsigned int> indices = {
-        0, 1, 4,    // Lewy trójkąt
-        4, 1, 2,    // Górny trójkąt
-        4, 2, 5,    // Środkowy trójkąt
-        5, 2, 3     // Prawy trójkąt
-    };
-
-    // Tymczasowy mesh
-    Mesh letterMesh;
-    setupMesh(letterMesh, vertices, indices);
-
-    // Rysowanie
-    glBindVertexArray(letterMesh.VAO);
-    glDrawElements(GL_TRIANGLES, letterMesh.indexCount, GL_UNSIGNED_INT, 0);
-    glBindVertexArray(0);
-
-    // Sprzątanie
-    deleteMesh(letterMesh);
-}
-
-// Funkcje rysowania prymitywów (Zadanie 1)
-void GeometryRenderer::drawPoints(const std::vector<glm::vec3>& points, float size) {
-    glPointSize(size);
-    glBegin(GL_POINTS);
-    for (const auto& point : points) {
-        glVertex3f(point.x, point.y, point.z);
-    }
-    glEnd();
-}
-
-void GeometryRenderer::drawLines(const std::vector<glm::vec3>& vertices) {
-    if (vertices.size() % 2 != 0) return;
-
-    glBegin(GL_LINES);
-    for (size_t i = 0; i < vertices.size(); i += 2) {
-        glVertex3f(vertices[i].x, vertices[i].y, vertices[i].z);
-        glVertex3f(vertices[i+1].x, vertices[i+1].y, vertices[i+1].z);
-    }
-    glEnd();
-}
-
-void GeometryRenderer::drawLineStrip(const std::vector<glm::vec3>& vertices) {
-    if (vertices.size() < 2) return;
-
-    glBegin(GL_LINE_STRIP);
-    for (const auto& v : vertices) {
-        glVertex3f(v.x, v.y, v.z);
-    }
-    glEnd();
-}
-
-void GeometryRenderer::drawLineLoop(const std::vector<glm::vec3>& vertices) {
-    if (vertices.size() < 2) return;
-
-    glBegin(GL_LINE_LOOP);
-    for (const auto& v : vertices) {
-        glVertex3f(v.x, v.y, v.z);
-    }
-    glEnd();
-}
-
-void GeometryRenderer::drawTriangles(const std::vector<glm::vec3>& vertices) {
-    if (vertices.size() % 3 != 0) return;
-
-    glBegin(GL_TRIANGLES);
-    for (const auto& v : vertices) {
-        glVertex3f(v.x, v.y, v.z);
-    }
-    glEnd();
-}
-
-void GeometryRenderer::drawTriangleStrip(const std::vector<glm::vec3>& vertices) {
-    if (vertices.size() < 3) return;
-
-    glBegin(GL_TRIANGLE_STRIP);
-    for (const auto& v : vertices) {
-        glVertex3f(v.x, v.y, v.z);
-    }
-    glEnd();
-}
-
-void GeometryRenderer::drawTriangleFan(const std::vector<glm::vec3>& vertices) {
-    if (vertices.size() < 3) return;
-
-    glBegin(GL_TRIANGLE_FAN);
-    for (const auto& v : vertices) {
-        glVertex3f(v.x, v.y, v.z);
-    }
-    glEnd();
-}
-
-void GeometryRenderer::drawQuads(const std::vector<glm::vec3>& vertices) {
-    if (vertices.size() % 4 != 0) return;
-
-    glBegin(GL_QUADS);
-    for (const auto& v : vertices) {
-        glVertex3f(v.x, v.y, v.z);
-    }
-    glEnd();
-}
-
-void GeometryRenderer::setupOldOpenGLArrays(const Mesh& mesh) {
-    // Przygotowanie tablic dla starego OpenGL (Rys. 10)
-    std::vector<float> positions;
-    std::vector<float> normals;
-    std::vector<float> colors;
-
-    for (const auto& vertex : mesh.vertices) {
-        positions.push_back(vertex.position.x);
-        positions.push_back(vertex.position.y);
-        positions.push_back(vertex.position.z);
-
-        normals.push_back(vertex.normal.x);
-        normals.push_back(vertex.normal.y);
-        normals.push_back(vertex.normal.z);
-
-        colors.push_back(vertex.color.r);
-        colors.push_back(vertex.color.g);
-        colors.push_back(vertex.color.b);
-    }
-
-    // Włączenie tablic (jak w Rys. 10)
-    glEnableClientState(GL_VERTEX_ARRAY);
-    glEnableClientState(GL_NORMAL_ARRAY);
-    glEnableClientState(GL_COLOR_ARRAY);
-
-    // Ustawienie wskaźników
-    glVertexPointer(3, GL_FLOAT, 0, positions.data());
-    glNormalPointer(GL_FLOAT, 0, normals.data());
-    glColorPointer(3, GL_FLOAT, 0, colors.data());
-}
-
-void GeometryRenderer::drawCubeOldOpenGL() {
-    std::cout << "Rysowanie sześcianu starym OpenGL (Rys. 10)" << std::endl;
-
-    // Ustawienie tablic zgodnie z instrukcją
-    setupOldOpenGLArrays(m_cubeMesh);
-
-    // Rysowanie za pomocą glDrawElements
-    glDrawElements(GL_TRIANGLES, m_cubeMesh.indices.size(),
-                   GL_UNSIGNED_INT, m_cubeMesh.indices.data());
-
-    // Wyłączenie tablic
-    glDisableClientState(GL_VERTEX_ARRAY);
-    glDisableClientState(GL_NORMAL_ARRAY);
-    glDisableClientState(GL_COLOR_ARRAY);
-}
-
-// ORYGINALNE FUNKCJE RYSOWANIA (bez zmian)
 void GeometryRenderer::drawCube(const glm::vec3& position, const glm::vec3& scale, const glm::vec3& rotation) {
     glm::mat4 model = glm::mat4(1.0f);
     model = glm::translate(model, position);
@@ -623,6 +430,9 @@ void GeometryRenderer::drawCube(const glm::vec3& position, const glm::vec3& scal
     if (rotation.x != 0.0f) model = glm::rotate(model, glm::radians(rotation.x), glm::vec3(1.0f, 0.0f, 0.0f));
     if (rotation.y != 0.0f) model = glm::rotate(model, glm::radians(rotation.y), glm::vec3(0.0f, 1.0f, 0.0f));
     if (rotation.z != 0.0f) model = glm::rotate(model, glm::radians(rotation.z), glm::vec3(0.0f, 0.0f, 1.0f));
+
+    // Ustaw macierz modelu w shaderze
+    // glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
 
     glBindVertexArray(m_cubeMesh.VAO);
     glDrawElements(m_drawMode, m_cubeMesh.indexCount, GL_UNSIGNED_INT, 0);
@@ -634,6 +444,9 @@ void GeometryRenderer::drawSphere(const glm::vec3& position, float radius) {
     model = glm::translate(model, position);
     model = glm::scale(model, glm::vec3(radius));
 
+    // Ustaw macierz modelu w shaderze
+    // glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
+
     glBindVertexArray(m_sphereMesh.VAO);
     glDrawElements(m_drawMode, m_sphereMesh.indexCount, GL_UNSIGNED_INT, 0);
     glBindVertexArray(0);
@@ -643,6 +456,9 @@ void GeometryRenderer::drawCylinder(const glm::vec3& position, float height, flo
     glm::mat4 model = glm::mat4(1.0f);
     model = glm::translate(model, position);
     model = glm::scale(model, glm::vec3(radius, height, radius));
+
+    // Ustaw macierz modelu w shaderze
+    // glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
 
     glBindVertexArray(m_cylinderMesh.VAO);
     glDrawElements(m_drawMode, m_cylinderMesh.indexCount, GL_UNSIGNED_INT, 0);
@@ -654,6 +470,9 @@ void GeometryRenderer::drawCone(const glm::vec3& position, float height, float r
     model = glm::translate(model, position);
     model = glm::scale(model, glm::vec3(radius, height, radius));
 
+    // Ustaw macierz modelu w shaderze
+    // glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
+
     glBindVertexArray(m_coneMesh.VAO);
     glDrawElements(m_drawMode, m_coneMesh.indexCount, GL_UNSIGNED_INT, 0);
     glBindVertexArray(0);
@@ -663,6 +482,9 @@ void GeometryRenderer::drawPlane(const glm::vec3& position, const glm::vec2& siz
     glm::mat4 model = glm::mat4(1.0f);
     model = glm::translate(model, position);
     model = glm::scale(model, glm::vec3(size.x, 1.0f, size.y));
+
+    // Ustaw macierz modelu w shaderze
+    // glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
 
     glBindVertexArray(m_planeMesh.VAO);
     glDrawElements(m_drawMode, m_planeMesh.indexCount, GL_UNSIGNED_INT, 0);
@@ -674,6 +496,9 @@ void GeometryRenderer::drawTorus(const glm::vec3& position, float majorRadius, f
     model = glm::translate(model, position);
     model = glm::scale(model, glm::vec3(majorRadius, majorRadius, majorRadius));
 
+    // Ustaw macierz modelu w shaderze
+    // glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
+
     glBindVertexArray(m_torusMesh.VAO);
     glDrawElements(m_drawMode, m_torusMesh.indexCount, GL_UNSIGNED_INT, 0);
     glBindVertexArray(0);
@@ -683,6 +508,9 @@ void GeometryRenderer::drawPyramid(const glm::vec3& position, float baseSize, fl
     glm::mat4 model = glm::mat4(1.0f);
     model = glm::translate(model, position);
     model = glm::scale(model, glm::vec3(baseSize, height, baseSize));
+
+    // Ustaw macierz modelu w shaderze
+    // glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
 
     glBindVertexArray(m_pyramidMesh.VAO);
     glDrawElements(m_drawMode, m_pyramidMesh.indexCount, GL_UNSIGNED_INT, 0);
@@ -697,6 +525,9 @@ void GeometryRenderer::drawGrid(const glm::vec3& position, int size, float spaci
     // Zapisz tryb rysowania
     GLenum prevMode = m_drawMode;
     m_drawMode = GL_LINES;
+
+    // Ustaw macierz modelu w shaderze
+    // glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
 
     glBindVertexArray(m_gridMesh.VAO);
     glDrawElements(m_drawMode, m_gridMesh.indexCount, GL_UNSIGNED_INT, 0);
@@ -912,9 +743,16 @@ void GeometryRenderer::setMaterial(const glm::vec3& ambient, const glm::vec3& di
     m_currentMaterial.diffuse = diffuse;
     m_currentMaterial.specular = specular;
     m_currentMaterial.shininess = shininess;
+
+    // Ustaw materiały w shaderze
+    // glUniform3fv(ambientLoc, 1, glm::value_ptr(ambient));
+    // glUniform3fv(diffuseLoc, 1, glm::value_ptr(diffuse));
+    // glUniform3fv(specularLoc, 1, glm::value_ptr(specular));
+    // glUniform1f(shininessLoc, shininess);
 }
 
 void GeometryRenderer::setColor(const glm::vec3& color) {
+    // Dla prostoty ustawiamy ten sam kolor dla wszystkich składników
     setMaterial(color * 0.2f, color, color * 0.5f, 32.0f);
 }
 
@@ -923,15 +761,18 @@ void GeometryRenderer::setDrawMode(GLenum mode) {
 }
 
 void GeometryRenderer::setModelMatrix(const glm::mat4& model) {
-    // Implementacja w shaderze
+    // Ustaw w shaderze
+    // glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
 }
 
 void GeometryRenderer::setViewMatrix(const glm::mat4& view) {
-    // Implementacja w shaderze
+    // Ustaw w shaderze
+    // glUniformMatrix4fv(viewLoc, 1, GL_FALSE, glm::value_ptr(view));
 }
 
 void GeometryRenderer::setProjectionMatrix(const glm::mat4& projection) {
-    // Implementacja w shaderze
+    // Ustaw w shaderze
+    // glUniformMatrix4fv(projectionLoc, 1, GL_FALSE, glm::value_ptr(projection));
 }
 
 void GeometryRenderer::drawMesh(const Mesh& mesh) {
