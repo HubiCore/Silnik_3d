@@ -1,0 +1,8 @@
+//
+// Created by ASUS ROG on 16.12.2025.
+//
+
+#ifndef SILNIK3D_CAMERA_HPP
+#define SILNIK3D_CAMERA_HPP
+
+#endif //SILNIK3D_CAMERA_HPP

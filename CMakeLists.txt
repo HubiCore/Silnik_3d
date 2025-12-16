@@ -39,6 +39,8 @@ add_executable(${PROJECT_NAME}
         main.cpp
         Engine.cpp
         GeometryRenderer.cpp
+        Camera.cpp
+        Camera.hpp
 )
 
 # Include directories
