@@ -208,8 +208,8 @@ void GeometryRenderer::createCylinder(int sectors) {
     float sectorStep = 2.0f * PI / sectors;
 
     // Centra podstaw
-    vertices.push_back({{0.0f, 0.5f, 0.0f}, {0.0f, 1.0f, 0.0f}, {0.5f, 0.5f}});  // górny środek
-    vertices.push_back({{0.0f, -0.5f, 0.0f}, {0.0f, -1.0f, 0.0f}, {0.5f, 0.5f}}); // dolny środek
+    vertices.push_back({{0.0f, 0.5f, 0.0f}, {0.0f, 1.0f, 0.0f}, {0.5f, 0.5f}});  // górny środek - indeks 0
+    vertices.push_back({{0.0f, -0.5f, 0.0f}, {0.0f, -1.0f, 0.0f}, {0.5f, 0.5f}}); // dolny środek - indeks 1
 
     // Wierzchołki dla każdego sektora
     for (int i = 0; i <= sectors; ++i) {
@@ -220,28 +220,28 @@ void GeometryRenderer::createCylinder(int sectors) {
         // Normalna dla boku
         glm::vec3 sideNormal = glm::normalize(glm::vec3(x, 0.0f, z));
 
-        // Górna podstawa (indeksy parzyste od 2)
+        // Górna podstawa
         vertices.push_back({
             {x, 0.5f, z},
             {0.0f, 1.0f, 0.0f},
             {x * 0.5f + 0.5f, z * 0.5f + 0.5f}
         });
 
-        // Dolna podstawa (indeksy nieparzyste od 3)
+        // Dolna podstawa
         vertices.push_back({
             {x, -0.5f, z},
             {0.0f, -1.0f, 0.0f},
             {x * 0.5f + 0.5f, z * 0.5f + 0.5f}
         });
 
-        // Wierzchołki dla ściany bocznej - GÓRA
+        // Ściana boczna - górny wierzchołek
         vertices.push_back({
             {x, 0.5f, z},
             sideNormal,
             {static_cast<float>(i) / sectors, 1.0f}
         });
 
-        // Wierzchołki dla ściany bocznej - DÓŁ
+        // Ściana boczna - dolny wierzchołek
         vertices.push_back({
             {x, -0.5f, z},
             sideNormal,
@@ -249,36 +249,33 @@ void GeometryRenderer::createCylinder(int sectors) {
         });
     }
 
-    // Górna podstawa (zgodnie z ruchem wskazówek zegara)
+    // Górna podstawa
     for (int i = 0; i < sectors; ++i) {
         indices.push_back(0);                    // środek
-        indices.push_back(2 + (i + 1) * 4);      // następny wierzchołek
         indices.push_back(2 + i * 4);            // obecny wierzchołek
+        indices.push_back(2 + (i + 1) * 4);      // następny wierzchołek
     }
 
-    // Dolna podstawa (przeciwnie do ruchu wskazówek zegara)
+    // Dolna podstawa
     for (int i = 0; i < sectors; ++i) {
         indices.push_back(1);                    // środek
-        indices.push_back(3 + i * 4);            // obecny wierzchołek
         indices.push_back(3 + (i + 1) * 4);      // następny wierzchołek
+        indices.push_back(3 + i * 4);            // obecny wierzchołek
     }
 
-    // Ściany boczne (2 trójkąty na sektor)
+    // Ściany boczne
     for (int i = 0; i < sectors; ++i) {
-        int topCurrent = 4 + i * 4;        // góra - obecny
-        int bottomCurrent = 5 + i * 4;     // dół - obecny
-        int topNext = 4 + (i + 1) * 4;     // góra - następny
-        int bottomNext = 5 + (i + 1) * 4;  // dół - następny
+        int base_idx = 2 + i * 4;
 
-        // Pierwszy trójkąt (górny prawy, dolny prawy, górny lewy)
-        indices.push_back(topCurrent);
-        indices.push_back(bottomCurrent);
-        indices.push_back(topNext);
+        // Pierwszy trójkąt ściany bocznej
+        indices.push_back(base_idx + 2);      // górny - obecny
+        indices.push_back(base_idx + 3);      // dolny - obecny
+        indices.push_back(2 + (i + 1) * 4 + 2); // górny - następny
 
-        // Drugi trójkąt (dolny prawy, dolny lewy, górny lewy)
-        indices.push_back(bottomCurrent);
-        indices.push_back(bottomNext);
-        indices.push_back(topNext);
+        // Drugi trójkąt ściany bocznej
+        indices.push_back(base_idx + 3);      // dolny - obecny
+        indices.push_back(2 + (i + 1) * 4 + 3); // dolny - następny
+        indices.push_back(2 + (i + 1) * 4 + 2); // górny - następny
     }
 
     setupMesh(m_cylinderMesh, vertices, indices);
@@ -393,27 +390,75 @@ void GeometryRenderer::createTorus(float radius, float tubeRadius, int sectors, 
 }
 
 void GeometryRenderer::createPyramid() {
-    std::vector<Vertex> vertices = {
-        // Podstawa
-        {{-0.5f, -0.5f, -0.5f}, {0.0f, -1.0f, 0.0f}, {0.0f, 0.0f}},
-        {{ 0.5f, -0.5f, -0.5f}, {0.0f, -1.0f, 0.0f}, {1.0f, 0.0f}},
-        {{ 0.5f, -0.5f,  0.5f}, {0.0f, -1.0f, 0.0f}, {1.0f, 1.0f}},
-        {{-0.5f, -0.5f,  0.5f}, {0.0f, -1.0f, 0.0f}, {0.0f, 1.0f}},
+    std::vector<Vertex> vertices;
+    std::vector<unsigned int> indices;
 
-        // Wierzchołek
-        {{ 0.0f,  0.5f,  0.0f}, {0.0f, 1.0f, 0.0f}, {0.5f, 1.0f}},
+    // Podstawa
+    glm::vec3 baseVertices[4] = {
+        {-0.5f, -0.5f, -0.5f},
+        { 0.5f, -0.5f, -0.5f},
+        { 0.5f, -0.5f,  0.5f},
+        {-0.5f, -0.5f,  0.5f}
     };
 
-    std::vector<unsigned int> indices = {
-        // Podstawa
-        0, 1, 2, 2, 3, 0,
-
-        // Ściany
-        0, 1, 4,
-        1, 2, 4,
-        2, 3, 4,
-        3, 0, 4
+    glm::vec2 baseTexCoords[4] = {
+        {0.0f, 0.0f},
+        {1.0f, 0.0f},
+        {1.0f, 1.0f},
+        {0.0f, 1.0f}
     };
+
+    // Wierzchołek piramidy
+    glm::vec3 apex = {0.0f, 0.5f, 0.0f};
+
+    // Dodaj wierzchołki podstawy
+    for (int i = 0; i < 4; ++i) {
+        Vertex vertex;
+        vertex.position = baseVertices[i];
+        vertex.normal = {0.0f, -1.0f, 0.0f};  // Normalna skierowana w dół
+        vertex.texCoord = baseTexCoords[i];
+        vertices.push_back(vertex);
+    }
+
+    // Dodaj wierzchołek szczytu
+    Vertex apexVertex;
+    apexVertex.position = apex;
+    apexVertex.texCoord = {0.5f, 0.5f};
+    vertices.push_back(apexVertex);
+
+    // Indeksy dla podstawy
+    indices.push_back(0);
+    indices.push_back(1);
+    indices.push_back(2);
+
+    indices.push_back(0);
+    indices.push_back(2);
+    indices.push_back(3);
+
+    // Dodaj wierzchołki i indeksy dla ścian bocznych
+    // Każda ściana ma swój własny wierzchołek wierzchołka (dla osobnych normalnych)
+    for (int i = 0; i < 4; ++i) {
+        int next = (i + 1) % 4;
+
+        // Oblicz normalną dla ściany
+        glm::vec3 edge1 = baseVertices[next] - baseVertices[i];
+        glm::vec3 edge2 = apex - baseVertices[i];
+        glm::vec3 normal = glm::normalize(glm::cross(edge1, edge2));
+
+        // Dodaj wierzchołek wierzchołka dla tej ściany z odpowiednią normalną
+        Vertex sideApexVertex;
+        sideApexVertex.position = apex;
+        sideApexVertex.normal = normal;
+        sideApexVertex.texCoord = {0.5f, 0.5f};
+        vertices.push_back(sideApexVertex);
+
+        int apexIdx = vertices.size() - 1;
+
+        // Dodaj indeksy dla ściany
+        indices.push_back(i);
+        indices.push_back(next);
+        indices.push_back(apexIdx);
+    }
 
     setupMesh(m_pyramidMesh, vertices, indices);
 }
