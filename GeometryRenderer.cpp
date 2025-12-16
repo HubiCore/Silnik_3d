@@ -376,46 +376,57 @@ void GeometryRenderer::createPyramid() {
     std::vector<unsigned int> indices;
 
     glm::vec3 base[4] = {
-        {-0.5f,-0.5f,-0.5f},
-        { 0.5f,-0.5f,-0.5f},
-        { 0.5f,-0.5f, 0.5f},
-        {-0.5f,-0.5f, 0.5f}
+        {-0.5f, -0.5f, -0.5f},
+        { 0.5f, -0.5f, -0.5f},
+        { 0.5f, -0.5f,  0.5f},
+        {-0.5f, -0.5f,  0.5f}
     };
 
-    // podstawa
-    for (int i = 0; i < 4; ++i)
-        vertices.push_back({base[i], {0,-1,0}, {0,0}});
+    glm::vec3 apex = {0.0f, 0.5f, 0.0f};
 
-    glm::vec3 apex = {0,0.5f,0};
+    /* ===== PODSTAWA ===== */
+    int baseStart = 0;
+    for (int i = 0; i < 4; ++i) {
+        vertices.push_back({
+            base[i],
+            {0.0f, -1.0f, 0.0f},
+            {0.0f, 0.0f}
+        });
+    }
 
-    // podstawa CCW
-    indices.insert(indices.end(), {0,2,1, 0,3,2});
+    // CCW patrząc Z DOŁU
+    indices.insert(indices.end(), {
+        baseStart + 0, baseStart + 2, baseStart + 1,
+        baseStart + 0, baseStart + 3, baseStart + 2
+    });
 
-    // ściany boczne
+    /* ===== ŚCIANY BOCZNE ===== */
     for (int i = 0; i < 4; ++i) {
         int next = (i + 1) % 4;
 
-        glm::vec3 normal = glm::normalize(
-            glm::cross(apex - base[i], base[next] - base[i])
-        );
+        // UWAGA: KOLEJNOŚĆ MA ZNACZENIE
+        glm::vec3 edge1 = apex - base[i];
+        glm::vec3 edge2 = base[next] - base[i];
+        glm::vec3 normal = glm::normalize(glm::cross(edge1, edge2));
 
-        Vertex vA = {base[i], normal, {0,0}};
-        Vertex vB = {base[next], normal, {1,0}};
-        Vertex vC = {apex, normal, {0.5f,1}};
+        int start = vertices.size();
 
-        int idx = vertices.size();
-        vertices.push_back(vA);
-        vertices.push_back(vB);
-        vertices.push_back(vC);
+        // osobne wierzchołki
+        vertices.push_back({ base[i],    normal, {0.0f, 0.0f} });
+        vertices.push_back({ apex,       normal, {0.5f, 1.0f} });
+        vertices.push_back({ base[next], normal, {1.0f, 0.0f} });
 
-        // 🔥 CCW – NA ZEWNĄTRZ
-        indices.push_back(idx);
-        indices.push_back(idx + 1);
-        indices.push_back(idx + 2);
+        // 🔥 TO JEST TEN FIX
+        // CCW widziane Z ZEWNĄTRZ
+        indices.push_back(start + 0); // base[i]
+        indices.push_back(start + 1); // apex
+        indices.push_back(start + 2); // base[next]
     }
 
     setupMesh(m_pyramidMesh, vertices, indices);
 }
+
+
 
 
 void GeometryRenderer::createGrid(int size) {

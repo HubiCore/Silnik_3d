@@ -3,17 +3,14 @@ project(MyGLFWProject)
 set(CMAKE_CXX_STANDARD 20)
 
 if (UNIX) # dla sigm
-    # Try to find GLFW using pkg-config first (more reliable on Unix)
     find_package(PkgConfig REQUIRED)
     pkg_check_modules(GLFW3 REQUIRED glfw3)
 
     find_package(OpenGL REQUIRED)
     find_package(glm REQUIRED)
-
-    # Find GLEW using pkg-config
+    #GLEW to brainrot
     pkg_check_modules(GLEW REQUIRED glew)
 
-    # Collect include directories
     set(MY_INCLUDE_DIRS
             ${GLFW3_INCLUDE_DIRS}
             ${OPENGL_INCLUDE_DIR}
@@ -21,14 +18,12 @@ if (UNIX) # dla sigm
             ${GLEW_INCLUDE_DIRS}
     )
 
-    # Collect libraries to link
     set(MY_LIBRARIES
             ${GLFW3_LIBRARIES}
             ${OPENGL_LIBRARIES}
             ${GLEW_LIBRARIES}
     )
 
-    # Add link directories
     set(MY_LINK_DIRECTORIES
             ${GLFW3_LIBRARY_DIRS}
             ${GLEW_LIBRARY_DIRS}
@@ -66,14 +61,12 @@ if (WIN32) # dla szpontów
         message(FATAL_ERROR "No GLFW library found")
     endif()
 
-    # Collect include directories for Windows
     set(MY_INCLUDE_DIRS
             "${GLFW_PATH}/include"
             "${GLM_PATH}"
             "${GLEW_PATH}/include"
     )
 
-    # Collect libraries to link for Windows
     set(MY_LIBRARIES
             ${GLFW_LIBRARY}
             "${GLEW_PATH}/lib/Release/x64/glew32s.lib"
@@ -103,7 +96,7 @@ target_link_libraries(${PROJECT_NAME} ${MY_LIBRARIES})
 
 if(WIN32)
     add_definitions(-D_USE_MATH_DEFINES)
-    add_definitions(-DGLEW_STATIC)  # Ważne dla statycznej wersji GLEW
+    add_definitions(-DGLEW_STATIC)  # Ważne dla statycznej wersji GLEW (coklwiek to znaczy)
 endif()
 
 add_definitions(-DGLM_FORCE_RADIANS)
