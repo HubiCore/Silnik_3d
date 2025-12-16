@@ -394,10 +394,9 @@ void GeometryRenderer::createPyramid() {
         });
     }
 
-    // CCW patrząc Z DOŁU
     indices.insert(indices.end(), {
-        baseStart + 0, baseStart + 2, baseStart + 1,
-        baseStart + 0, baseStart + 3, baseStart + 2
+        baseStart + 0, baseStart + 1, baseStart + 2,
+        baseStart + 0, baseStart + 2, baseStart + 3
     });
 
     /* ===== ŚCIANY BOCZNE ===== */
@@ -416,8 +415,7 @@ void GeometryRenderer::createPyramid() {
         vertices.push_back({ apex,       normal, {0.5f, 1.0f} });
         vertices.push_back({ base[next], normal, {1.0f, 0.0f} });
 
-        // 🔥 TO JEST TEN FIX
-        // CCW widziane Z ZEWNĄTRZ
+
         indices.push_back(start + 0); // base[i]
         indices.push_back(start + 1); // apex
         indices.push_back(start + 2); // base[next]
