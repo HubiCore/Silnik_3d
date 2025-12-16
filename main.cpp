@@ -126,6 +126,37 @@ void keyCallback(GLFWwindow* window, int key, int scancode, int action, int mods
         std::cout << "Sterowanie kamera: " << (cameraEnabled ? "WLACZONE" : "WYLACZONE") << std::endl;
     }
 
+    if (key == GLFW_KEY_F11 && action == GLFW_PRESS) {
+        // Przełącz tryb pełnoekranowy
+        static bool isFullscreen = false;
+        static int savedWindowPosX, savedWindowPosY;
+        static int savedWindowWidth, savedWindowHeight;
+
+        GLFWmonitor* monitor = glfwGetPrimaryMonitor();
+        const GLFWvidmode* mode = glfwGetVideoMode(monitor);
+
+        if (!isFullscreen) {
+            // Zapamiętaj aktualną pozycję i rozmiar okna
+            glfwGetWindowPos(window, &savedWindowPosX, &savedWindowPosY);
+            glfwGetWindowSize(window, &savedWindowWidth, &savedWindowHeight);
+
+            // Przełącz na pełny ekran
+            glfwSetWindowMonitor(window, monitor, 0, 0, mode->width, mode->height, mode->refreshRate);
+            std::cout << "Pelny ekran wlaczony: " << mode->width << "x" << mode->height << std::endl;
+        } else {
+            // Przywróć okno
+            glfwSetWindowMonitor(window, nullptr, savedWindowPosX, savedWindowPosY, savedWindowWidth, savedWindowHeight, 0);
+            std::cout << "Pelny ekran wylaczony, przywrocono rozmiar: " << savedWindowWidth << "x" << savedWindowHeight << std::endl;
+        }
+
+        isFullscreen = !isFullscreen;
+
+        // Uaktualnij viewport po zmianie rozmiaru
+        int width, height;
+        glfwGetFramebufferSize(window, &width, &height);
+        glViewport(0, 0, width, height);
+    }
+
     if (key == GLFW_KEY_T && action == GLFW_PRESS) {
         cameraType = static_cast<Camera::CameraType>((cameraType + 1) % 3);
         camera.setType(cameraType);
