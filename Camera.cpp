@@ -4,11 +4,11 @@
 Camera::Camera(glm::vec3 position, glm::vec3 up, float yaw, float pitch, CameraType type)
     : m_front(glm::vec3(0.0f, 0.0f, -1.0f)),
       m_movementSpeed(2.5f),
-      m_mouseSensitivity(0.1f),
-      m_zoom(45.0f),
+      m_mouseSensitivity(0.05f),
+      m_zoom(60.0f),
       m_type(type),
       m_orbitTarget(glm::vec3(0.0f)),
-      m_orbitRadius(5.0f),
+      m_orbitRadius(4.0f),
       m_orbitYaw(0.0f),
       m_orbitPitch(0.0f) {
 

@@ -106,10 +106,6 @@ void keyCallback(GLFWwindow* window, int key, int scancode, int action, int mods
         glfwSetWindowShouldClose(window, GLFW_TRUE);
     }
 
-    if (key == GLFW_KEY_SPACE && action == GLFW_PRESS) {
-        std::cout << "Spacja nacisnieta" << std::endl;
-    }
-
     if (key == GLFW_KEY_1 && action == GLFW_PRESS) {
         glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
         std::cout << "Tryb: Wypelnione trojkaty" << std::endl;
@@ -290,10 +286,10 @@ void update(Engine& engine) {
             camera.processKeyboard(Camera::LEFT, engine.getDeltaTime());
         if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS)
             camera.processKeyboard(Camera::RIGHT, engine.getDeltaTime());
-        if (glfwGetKey(window, GLFW_KEY_Q) == GLFW_PRESS)
-            camera.processKeyboard(Camera::UP, engine.getDeltaTime());
-        if (glfwGetKey(window, GLFW_KEY_E) == GLFW_PRESS)
+        if (glfwGetKey(window, GLFW_KEY_LEFT_CONTROL) == GLFW_PRESS)
             camera.processKeyboard(Camera::DOWN, engine.getDeltaTime());
+        if (glfwGetKey(window, GLFW_KEY_SPACE) == GLFW_PRESS)
+            camera.processKeyboard(Camera::UP, engine.getDeltaTime());
 
         // Zmiana prędkości kamery
         if (glfwGetKey(window, GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS)
