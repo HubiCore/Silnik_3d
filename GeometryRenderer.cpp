@@ -205,56 +205,80 @@ void GeometryRenderer::createCylinder(int sectors) {
     std::vector<Vertex> vertices;
     std::vector<unsigned int> indices;
 
-    float sectorStep = 2 * PI / sectors;
+    float sectorStep = 2.0f * PI / sectors;
 
-    // Środek góry
-    vertices.push_back({{0.0f, 0.5f, 0.0f}, {0.0f, 1.0f, 0.0f}, {0.5f, 0.5f}});
-    // Środek dołu
-    vertices.push_back({{0.0f, -0.5f, 0.0f}, {0.0f, -1.0f, 0.0f}, {0.5f, 0.5f}});
+    // Centra podstaw
+    vertices.push_back({{0.0f, 0.5f, 0.0f}, {0.0f, 1.0f, 0.0f}, {0.5f, 0.5f}});  // górny środek
+    vertices.push_back({{0.0f, -0.5f, 0.0f}, {0.0f, -1.0f, 0.0f}, {0.5f, 0.5f}}); // dolny środek
 
+    // Wierzchołki dla każdego sektora
     for (int i = 0; i <= sectors; ++i) {
         float angle = i * sectorStep;
         float x = cosf(angle);
         float z = sinf(angle);
 
-        // Górna podstawa
-        vertices.push_back({{x, 0.5f, z}, {0.0f, 1.0f, 0.0f}, {x * 0.5f + 0.5f, z * 0.5f + 0.5f}});
-        // Dolna podstawa
-        vertices.push_back({{x, -0.5f, z}, {0.0f, -1.0f, 0.0f}, {x * 0.5f + 0.5f, z * 0.5f + 0.5f}});
-        // Ściana górna
-        vertices.push_back({{x, 0.5f, z}, {x, 0.0f, z}, {static_cast<float>(i) / sectors, 1.0f}});
-        // Ściana dolna
-        vertices.push_back({{x, -0.5f, z}, {x, 0.0f, z}, {static_cast<float>(i) / sectors, 0.0f}});
+        // Normalna dla boku
+        glm::vec3 sideNormal = glm::normalize(glm::vec3(x, 0.0f, z));
+
+        // Górna podstawa (indeksy parzyste od 2)
+        vertices.push_back({
+            {x, 0.5f, z},
+            {0.0f, 1.0f, 0.0f},
+            {x * 0.5f + 0.5f, z * 0.5f + 0.5f}
+        });
+
+        // Dolna podstawa (indeksy nieparzyste od 3)
+        vertices.push_back({
+            {x, -0.5f, z},
+            {0.0f, -1.0f, 0.0f},
+            {x * 0.5f + 0.5f, z * 0.5f + 0.5f}
+        });
+
+        // Wierzchołki dla ściany bocznej - GÓRA
+        vertices.push_back({
+            {x, 0.5f, z},
+            sideNormal,
+            {static_cast<float>(i) / sectors, 1.0f}
+        });
+
+        // Wierzchołki dla ściany bocznej - DÓŁ
+        vertices.push_back({
+            {x, -0.5f, z},
+            sideNormal,
+            {static_cast<float>(i) / sectors, 0.0f}
+        });
     }
 
-    // Górna podstawa
+    // Górna podstawa (zgodnie z ruchem wskazówek zegara)
     for (int i = 0; i < sectors; ++i) {
-        indices.push_back(0);
-        indices.push_back(2 + i * 4);
-        indices.push_back(2 + (i + 1) * 4);
+        indices.push_back(0);                    // środek
+        indices.push_back(2 + (i + 1) * 4);      // następny wierzchołek
+        indices.push_back(2 + i * 4);            // obecny wierzchołek
     }
 
-    // Dolna podstawa
+    // Dolna podstawa (przeciwnie do ruchu wskazówek zegara)
     for (int i = 0; i < sectors; ++i) {
-        indices.push_back(1);
-        indices.push_back(3 + i * 4);
-        indices.push_back(3 + (i + 1) * 4);
+        indices.push_back(1);                    // środek
+        indices.push_back(3 + i * 4);            // obecny wierzchołek
+        indices.push_back(3 + (i + 1) * 4);      // następny wierzchołek
     }
 
-    // Ściany
+    // Ściany boczne (2 trójkąty na sektor)
     for (int i = 0; i < sectors; ++i) {
-        int k1 = 4 + i * 4;
-        int k2 = 5 + i * 4;
-        int k3 = 4 + (i + 1) * 4;
-        int k4 = 5 + (i + 1) * 4;
+        int topCurrent = 4 + i * 4;        // góra - obecny
+        int bottomCurrent = 5 + i * 4;     // dół - obecny
+        int topNext = 4 + (i + 1) * 4;     // góra - następny
+        int bottomNext = 5 + (i + 1) * 4;  // dół - następny
 
-        indices.push_back(k1);
-        indices.push_back(k2);
-        indices.push_back(k3);
+        // Pierwszy trójkąt (górny prawy, dolny prawy, górny lewy)
+        indices.push_back(topCurrent);
+        indices.push_back(bottomCurrent);
+        indices.push_back(topNext);
 
-        indices.push_back(k2);
-        indices.push_back(k4);
-        indices.push_back(k3);
+        // Drugi trójkąt (dolny prawy, dolny lewy, górny lewy)
+        indices.push_back(bottomCurrent);
+        indices.push_back(bottomNext);
+        indices.push_back(topNext);
     }
 
     setupMesh(m_cylinderMesh, vertices, indices);
