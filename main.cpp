@@ -8,6 +8,7 @@
 
 #include "Engine.hpp"
 #include "GeometryRenderer.hpp"
+#include "Camera.hpp"
 #include <iostream>
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
@@ -84,6 +85,15 @@ void main()
 
 GLuint shaderProgram;
 
+// Camera
+Camera camera(glm::vec3(0.0f, 2.0f, 8.0f));
+bool firstMouse = true;
+float lastX = 400, lastY = 300;
+
+// Variables for camera control
+bool cameraEnabled = true;
+Camera::CameraType cameraType = Camera::FPS;
+
 // Callback klawiatury
 void keyCallback(GLFWwindow* window, int key, int scancode, int action, int mods) {
     if (key == GLFW_KEY_ESCAPE && action == GLFW_PRESS) {
@@ -92,6 +102,8 @@ void keyCallback(GLFWwindow* window, int key, int scancode, int action, int mods
 
     if (key == GLFW_KEY_F && action == GLFW_PRESS) {
         std::cout << "Klawisz F nacisniety" << std::endl;
+        std::cout << "--AUTODESTRUKCJA--" << std::endl;
+        glfwSetWindowShouldClose(window, GLFW_TRUE);
     }
 
     if (key == GLFW_KEY_SPACE && action == GLFW_PRESS) {
@@ -112,18 +124,62 @@ void keyCallback(GLFWwindow* window, int key, int scancode, int action, int mods
         glPolygonMode(GL_FRONT_AND_BACK, GL_POINT);
         std::cout << "Tryb: Punkty" << std::endl;
     }
+
+    if (key == GLFW_KEY_C && action == GLFW_PRESS) {
+        cameraEnabled = !cameraEnabled;
+        std::cout << "Sterowanie kamera: " << (cameraEnabled ? "WLACZONE" : "WYLACZONE") << std::endl;
+    }
+
+    if (key == GLFW_KEY_T && action == GLFW_PRESS) {
+        cameraType = static_cast<Camera::CameraType>((cameraType + 1) % 3);
+        camera.setType(cameraType);
+
+        std::string typeName;
+        switch (cameraType) {
+            case Camera::FREE: typeName = "WOLNA"; break;
+            case Camera::FPS: typeName = "FPS"; break;
+            case Camera::ORBIT:
+                typeName = "ORBITALNA";
+                camera.setOrbitTarget(glm::vec3(0.0f, 0.0f, 0.0f));
+                camera.setOrbitRadius(10.0f);
+                break;
+        }
+        std::cout << "Tryb kamery: " << typeName << std::endl;
+    }
+
+    if (key == GLFW_KEY_R && action == GLFW_PRESS) {
+        camera.setPosition(glm::vec3(0.0f, 2.0f, 8.0f));
+        camera.setYaw(-90.0f);
+        camera.setPitch(0.0f);
+        std::cout << "Kamera zresetowana" << std::endl;
+    }
 }
 
 // Callback myszy
 void mouseCallback(GLFWwindow* window, double xpos, double ypos) {
-    static double lastX = xpos;
-    static double lastY = ypos;
+    static bool firstMouseCall = true;
 
-    double xoffset = xpos - lastX;
-    double yoffset = lastY - ypos;
+    if (!cameraEnabled) return;
+
+    if (firstMouseCall) {
+        lastX = xpos;
+        lastY = ypos;
+        firstMouseCall = false;
+    }
+
+    float xoffset = xpos - lastX;
+    float yoffset = lastY - ypos; // Odwrócone, bo współrzędne Y rosną od dołu do góry
 
     lastX = xpos;
     lastY = ypos;
+
+    camera.processMouseMovement(xoffset, yoffset);
+}
+
+// Callback scrolla myszy
+void scrollCallback(GLFWwindow* window, double xoffset, double yoffset) {
+    if (!cameraEnabled) return;
+    camera.processMouseScroll(yoffset);
 }
 
 // Callback przycisku myszy
@@ -134,6 +190,15 @@ void mouseButtonCallback(GLFWwindow* window, int button, int action, int mods) {
 
     if (button == GLFW_MOUSE_BUTTON_RIGHT && action == GLFW_PRESS) {
         std::cout << "Prawy przycisk myszy nacisniety" << std::endl;
+    }
+
+    if (button == GLFW_MOUSE_BUTTON_MIDDLE && action == GLFW_PRESS) {
+        cameraEnabled = !cameraEnabled;
+        if (cameraEnabled) {
+            firstMouse = true;
+        }
+        std::cout << "Środkowy przycisk myszy nacisniety" << std::endl;
+        std::cout << "Sterowanie kamera: " << (cameraEnabled ? "WLACZONE" : "WYLACZONE") << std::endl;
     }
 }
 
@@ -201,7 +266,7 @@ void createShaderProgram() {
 }
 
 // Funkcja aktualizacji
-void update() {
+void update(Engine& engine) {
     rotationAngle += 0.5f;
     if (rotationAngle > 360.0f) rotationAngle -= 360.0f;
 
@@ -212,21 +277,43 @@ void update() {
     float lightX = sin(glfwGetTime()) * 5.0f;
     float lightZ = cos(glfwGetTime()) * 5.0f;
     lightPos = glm::vec3(lightX, 5.0f, lightZ);
+
+    // Obsługa klawiatury dla kamery
+    if (cameraEnabled) {
+        GLFWwindow* window = engine.getWindow();
+
+        if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS)
+            camera.processKeyboard(Camera::FORWARD, engine.getDeltaTime());
+        if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS)
+            camera.processKeyboard(Camera::BACKWARD, engine.getDeltaTime());
+        if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS)
+            camera.processKeyboard(Camera::LEFT, engine.getDeltaTime());
+        if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS)
+            camera.processKeyboard(Camera::RIGHT, engine.getDeltaTime());
+        if (glfwGetKey(window, GLFW_KEY_Q) == GLFW_PRESS)
+            camera.processKeyboard(Camera::UP, engine.getDeltaTime());
+        if (glfwGetKey(window, GLFW_KEY_E) == GLFW_PRESS)
+            camera.processKeyboard(Camera::DOWN, engine.getDeltaTime());
+
+        // Zmiana prędkości kamery
+        if (glfwGetKey(window, GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS)
+            camera.setMovementSpeed(5.0f);
+        else
+            camera.setMovementSpeed(2.5f);
+    }
 }
-
-
 
 // Funkcja renderowania z uzyciem GeometryRenderer
 void render() {
     if (!geometryRenderer) return;
 
     // Ustaw macierze
-    projection = glm::perspective(glm::radians(45.0f), 800.0f/600.0f, 0.1f, 100.0f);
-    view = glm::lookAt(
-        viewPos,                       // Pozycja kamery
-        glm::vec3(0.0f, 0.0f, 0.0f),  // Punkt, na ktory patrzy kamera
-        glm::vec3(0.0f, 1.0f, 0.0f)   // Wektor "gora" kamery
-    );
+    float aspectRatio = 800.0f / 600.0f;
+    projection = glm::perspective(glm::radians(camera.getZoom()), aspectRatio, 0.1f, 100.0f);
+
+    // Użyj widoku z kamery
+    view = camera.getViewMatrix();
+    viewPos = camera.getPosition();
 
     geometryRenderer->setProjectionMatrix(projection);
     geometryRenderer->setViewMatrix(view);
@@ -273,7 +360,7 @@ void render() {
         glUniform3f(objectColorLoc, 0.2f, 0.8f, 0.2f); // Zielony
         geometryRenderer->drawSphere(glm::vec3(3.0f, 1.0f, 0.0f), 0.8f);
 
-        // 3. Rysowanie walca po lewej stronie - POPRAWIONE
+        // 3. Rysowanie walca po lewej stronie
         model = glm::mat4(1.0f);
         model = glm::translate(model, glm::vec3(-3.0f, 0.0f, 0.0f));
         glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
@@ -343,12 +430,17 @@ void render() {
     glUniform3f(objectColorLoc, 1.0f, 1.0f, 1.0f); // Bialy
     geometryRenderer->drawPoint(lightPos, 10.0f, glm::vec3(1.0f, 1.0f, 1.0f));
 
+    // 11. Rysowanie pozycji kamery (opcjonalnie, dla debugowania)
+    geometryRenderer->setDrawMode(GL_POINTS);
+    glUniform3f(objectColorLoc, 0.0f, 1.0f, 1.0f); // Cyjan
+    geometryRenderer->drawPoint(camera.getPosition(), 5.0f, glm::vec3(0.0f, 1.0f, 1.0f));
+
     // Przywróć tryb rysowania
     geometryRenderer->setDrawMode(GL_TRIANGLES);
 }
 
 int main() {
-    std::cout << "=== SILNIK 3D===" << std::endl;
+    std::cout << "=== SILNIK 3D ===" << std::endl;
     std::cout << "\nInicjalizacja..." << std::endl;
 
     // Utworzenie silnika
@@ -378,6 +470,12 @@ int main() {
     engine.setMouseButtonCallback(mouseButtonCallback);
     engine.setResizeCallback(resizeCallback);
 
+    // Ustawienie callbacka scrolla myszy
+    glfwSetScrollCallback(engine.getWindow(), scrollCallback);
+
+    // Ustawienie kursora
+    engine.setCursorMode(GLFW_CURSOR_DISABLED);
+
     // Ustawienie koloru tla
     engine.setClearColor(0.1f, 0.1f, 0.1f, 1.0f); // Ciemnoszary
 
@@ -386,10 +484,36 @@ int main() {
     std::cout << "1: Tryb wypelniony (GL_FILL)" << std::endl;
     std::cout << "2: Tryb linie (GL_LINE)" << std::endl;
     std::cout << "3: Tryb punkty (GL_POINT)" << std::endl;
+    std::cout << "C: Wlacz/Wylacz sterowanie kamera" << std::endl;
+    std::cout << "T: Zmien tryb kamery (WOLNA/FPS/ORBITALNA)" << std::endl;
+    std::cout << "R: Resetuj kamere" << std::endl;
+    std::cout << "Srodkowy przycisk myszy: Wlacz/Wylacz kamere" << std::endl;
+    std::cout << "WASD: Poruszanie kamera" << std::endl;
+    std::cout << "QE: Gora/Dol" << std::endl;
+    std::cout << "Shift: Przyspiesz ruch" << std::endl;
+    std::cout << "Mysz: Patrzenie" << std::endl;
+    std::cout << "Scroll: Zoom" << std::endl;
     std::cout << "==================" << std::endl;
 
+    std::cout << "\n=== INFORMACJE ===" << std::endl;
+    std::cout << "Pozycja kamery: (" << camera.getPosition().x << ", "
+              << camera.getPosition().y << ", " << camera.getPosition().z << ")" << std::endl;
+    std::cout << "Tryb kamery: FPS" << std::endl;
+    std::cout << "Sterowanie kamera: WLACZONE" << std::endl;
+    std::cout << "==================" << std::endl;
+
+    // Lambda dla aktualizacji z referencją do silnika
+    auto updateWrapper = [&engine]() {
+        update(engine);
+    };
+
+    // Lambda dla renderowania
+    auto renderWrapper = []() {
+        render();
+    };
+
     // Uruchomienie glownej petli
-    engine.run(update, render);
+    engine.run(updateWrapper, renderWrapper);
 
     geometryRenderer = nullptr;
 
