@@ -81,6 +81,8 @@ add_executable(${PROJECT_NAME}
         GeometryRenderer.cpp
         Camera.cpp
         Camera.hpp
+        ComplexObject.hpp
+        ComplexObject.cpp
 )
 
 # Add include directories

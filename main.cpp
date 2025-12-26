@@ -5,7 +5,7 @@
 
 #include <GL/glew.h>
 #include <GLFW/glfw3.h>
-
+#include "ComplexObject.hpp"
 #include "Engine.hpp"
 #include "GeometryRenderer.hpp"
 #include "Camera.hpp"
@@ -94,6 +94,9 @@ float lastX = 400, lastY = 300;
 bool cameraEnabled = true;
 Camera::CameraType cameraType = Camera::FPS;
 
+ComplexObject letterH;
+float letterRotation = 0.0f;
+bool showLetterH = true;
 // Callback klawiatury
 void keyCallback(GLFWwindow* window, int key, int scancode, int action, int mods) {
     if (key == GLFW_KEY_ESCAPE && action == GLFW_PRESS) {
@@ -434,6 +437,17 @@ void render() {
         glUniform1i(useVertexColorLoc, 1); // Użyj kolorów wierzchołków
         glUniform3f(objectColorLoc, 0.5f, 0.5f, 0.5f); // Szary (backup)
         geometryRenderer->drawGrid(glm::vec3(0.0f, -2.0f, 0.0f), 20, 1.0f);
+
+        // 9. Ryoswanie "H"
+        letterH.setPosition(glm::vec3(0.0f, 1.5f, 0.0f));
+        letterH.setRotation(glm::vec3(0.0f, letterRotation, 0.0f));
+        glUniform1i(useVertexColorLoc, 1); // Użyj kolorów z wierzchołków
+        model = letterH.getModelMatrix();
+        glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
+        glUniform3f(objectColorLoc, 0.9f, 0.2f, 0.2f);
+        letterH.draw();
+        glUniform1i(useVertexColorLoc, 0);
+
     } else {
         // Tryb zadań z instrukcji
         glUniform1i(useVertexColorLoc, 1); // Użyj kolorów wierzchołków
@@ -488,6 +502,8 @@ int main() {
 
     geometryRenderer = &renderer;
 
+    //Inicjalizacja ComplexObject, a dokładnie litery
+    letterH.createLetterH(2.0f, 3.0f, 0.5f, glm::vec3(0.9f, 0.2f, 0.2f));
     // Utworz shadery
     createShaderProgram();
 

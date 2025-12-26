@@ -243,7 +243,7 @@ void GeometryRenderer::createCylinder(int sectors) {
         indices.push_back(3 + (i+1)*4);
     }
 
-    // ŚCIANY BOCZNE – 🔥 POPRAWIONY WINDING
+    // ŚCIANY BOCZNE – 🔥 POPRAWIONY WINDING (ale dospermiona emotka)
     for (int i = 0; i < sectors; ++i) {
         int base = 2 + i * 4;
         int next = 2 + (i + 1) * 4;
@@ -770,7 +770,9 @@ void GeometryRenderer::drawDisk(const glm::vec3& center, float innerRadius, floa
         drawLine(inner1, outer1);
     }
 }
-
+void GeometryRenderer::drawHarnas(const glm::vec3& position, float height, float radius) {
+    //NAHHHHHHH BRU HB URUASNR
+}
 void GeometryRenderer::setMaterial(const glm::vec3& ambient, const glm::vec3& diffuse, const glm::vec3& specular, float shininess) {
     m_currentMaterial.ambient = ambient;
     m_currentMaterial.diffuse = diffuse;
@@ -813,3 +815,5 @@ void GeometryRenderer::drawMesh(const Mesh& mesh) {
     glDrawElements(m_drawMode, mesh.indexCount, GL_UNSIGNED_INT, 0);
     glBindVertexArray(0);
 }
+
+

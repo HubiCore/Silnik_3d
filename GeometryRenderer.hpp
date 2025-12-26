@@ -3,7 +3,7 @@
 
 #include <vector>
 #include <glm/glm.hpp>
-
+#include <GL/glew.h>
 struct Vertex {
     glm::vec3 position;
     glm::vec3 normal;
@@ -81,7 +81,7 @@ public:
     void drawPolygon(const std::vector<glm::vec3>& vertices, bool filled = false);
     void drawCircle(const glm::vec3& center, float radius, int segments = 32);
     void drawDisk(const glm::vec3& center, float innerRadius, float outerRadius, int segments = 32);
-
+    void drawHarnas(const glm::vec3& position, float height, float radius);
     // Ustawienia
     void setMaterial(const glm::vec3& ambient, const glm::vec3& diffuse, const glm::vec3& specular, float shininess);
     void setColor(const glm::vec3& color);
