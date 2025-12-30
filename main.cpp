@@ -85,6 +85,11 @@ void main()
 }
 )";
 
+static Engine* globalEngine = nullptr;
+
+bool autoBackgroundChange = false;
+glm::vec4 currentBackgroundColor(0.1f, 0.1f, 0.1f, 1.0f);
+
 GLuint shaderProgram;
 
 // Camera
@@ -124,6 +129,43 @@ TransformableObject* childSphere = nullptr;
 void keyCallback(GLFWwindow* window, int key, int scancode, int action, int mods) {
     if (key == GLFW_KEY_ESCAPE && action == GLFW_PRESS) {
         glfwSetWindowShouldClose(window, GLFW_TRUE);
+    }
+
+    if (key == GLFW_KEY_B && action == GLFW_PRESS) {
+        static int bgColor = 0;
+        bgColor = (bgColor + 1) % 5;
+
+        switch(bgColor) {
+            case 0:
+                currentBackgroundColor = glm::vec4(0.1f, 0.1f, 0.1f, 1.0f);
+                std::cout << "Kolor tla: Szary" << std::endl;
+                break;
+            case 1:
+                currentBackgroundColor = glm::vec4(0.0f, 0.0f, 0.0f, 1.0f);
+                std::cout << "Kolor tla: Czarny" << std::endl;
+                break;
+            case 2:
+                currentBackgroundColor = glm::vec4(1.0f, 1.0f, 1.0f, 1.0f);
+                std::cout << "Kolor tla: Bialy" << std::endl;
+                break;
+            case 3:
+                currentBackgroundColor = glm::vec4(0.0f, 0.1f, 0.3f, 1.0f);
+                std::cout << "Kolor tla: Niebieski" << std::endl;
+                break;
+            case 4:
+                currentBackgroundColor = glm::vec4(0.1f, 0.0f, 0.0f, 1.0f);
+                std::cout << "Kolor tla: Czerwony" << std::endl;
+                break;
+        }
+
+        // Ustaw kolor natychmiast
+        globalEngine->setClearColor(currentBackgroundColor.r, currentBackgroundColor.g,
+                            currentBackgroundColor.b, currentBackgroundColor.a);
+    }
+
+    if (key == GLFW_KEY_V && action == GLFW_PRESS) {
+        autoBackgroundChange = !autoBackgroundChange;
+        std::cout << "Automatyczna zmiana tla: " << (autoBackgroundChange ? "WLACZONA" : "WYLACZONA") << std::endl;
     }
 
     if (key == GLFW_KEY_F && action == GLFW_PRESS) {
@@ -395,6 +437,23 @@ void createShaderProgram() {
 
 // Funkcja aktualizacji
 void update(Engine& engine) {
+
+    static float timeAccumulator = 0.0f;
+    timeAccumulator += engine.getDeltaTime();
+
+    if (autoBackgroundChange) {
+        float time = glfwGetTime();
+        float r = 0.5f + 0.5f * sin(time);
+        float g = 0.5f + 0.5f * sin(time + 2.0f);
+        float b = 0.5f + 0.5f * sin(time + 4.0f);
+        currentBackgroundColor = glm::vec4(r, g, b, 1.0f);
+        engine.setClearColor(r, g, b, 1.0f);
+    } else {
+        // Używamy koloru ustawionego ręcznie
+        engine.setClearColor(currentBackgroundColor.r, currentBackgroundColor.g,
+                           currentBackgroundColor.b, currentBackgroundColor.a);
+    }
+
     // Aktualizacja kątów obrotu
     rotationAngle += 0.5f;
     if (rotationAngle > 360.0f) rotationAngle -= 360.0f;
@@ -583,7 +642,7 @@ int main() {
 
     // Utworzenie silnika
     Engine engine(800, 600, 60, false);
-
+    globalEngine = &engine;
     // Inicjalizacja silnika
     if (!engine.initialize()) {
         std::cerr << "Nie udalo sie zainicjalizowac silnika!" << std::endl;
@@ -693,6 +752,8 @@ int main() {
     std::cout << "Ctrl+R: Resetuj rotację szescianu" << std::endl;
     std::cout << "H: Przelacz widocznosc litery H" << std::endl;
     std::cout << "M: Zmien tryb renderowania" << std::endl;
+    std::cout << "B: Zmien kolor tla (5 opcji)" << std::endl;
+    std::cout << "V: Wlacz/wylacz automatyczna zmiane tla" << std::endl;
     std::cout << "Lewy przycisk myszy: Zmien kolor kuli na czerwony" << std::endl;
     std::cout << "Prawy przycisk myszy: Przywroc kolor kuli" << std::endl;
     std::cout << "==================" << std::endl;
