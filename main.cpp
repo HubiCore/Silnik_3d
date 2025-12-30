@@ -8,7 +8,9 @@
 #include "ComplexObject.hpp"
 #include "Engine.hpp"
 #include "GeometryRenderer.hpp"
-#include "Camera.hpp"
+#include "Camera/Camera.hpp"
+#include "SceneManager/SceneManager.hpp"
+#include "Transform/TransformableGeometry.hpp"
 #include <iostream>
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
@@ -94,9 +96,30 @@ float lastX = 400, lastY = 300;
 bool cameraEnabled = true;
 Camera::CameraType cameraType = Camera::FPS;
 
-ComplexObject letterH;
-float letterRotation = 0.0f;
-bool showLetterH = true;
+// Zmienne globalne dla animacji
+float rotationAngle = 0.0f;
+float cubeRotation = 0.0f;
+GeometryRenderer* geometryRenderer = nullptr;
+int renderMode = 0; // 0 = wszystkie kształty, 1 = tylko zadania z instrukcji
+
+// Macierze
+glm::mat4 projection;
+glm::mat4 view;
+glm::mat4 model;
+
+// Oświetlenie
+glm::vec3 lightPos(5.0f, 5.0f, 5.0f);
+glm::vec3 lightColor(1.0f, 1.0f, 1.0f);
+glm::vec3 viewPos(0.0f, 3.0f, 8.0f);
+
+// Zmienne globalne dla nowego systemu transformacji
+SceneManager* sceneManager = nullptr;
+TransformableObject* rotatingCube = nullptr;
+TransformableObject* orbitingSphere = nullptr;
+ComplexObjectWithTransform* letterHObject = nullptr;
+TransformableObject* parentCube = nullptr;
+TransformableObject* childSphere = nullptr;
+
 // Callback klawiatury
 void keyCallback(GLFWwindow* window, int key, int scancode, int action, int mods) {
     if (key == GLFW_KEY_ESCAPE && action == GLFW_PRESS) {
@@ -183,6 +206,86 @@ void keyCallback(GLFWwindow* window, int key, int scancode, int action, int mods
         camera.setPitch(0.0f);
         std::cout << "Kamera zresetowana" << std::endl;
     }
+
+    // Przełączanie między trybami renderowania
+    if (key == GLFW_KEY_M && action == GLFW_PRESS) {
+        renderMode = (renderMode + 1) % 2;
+        std::cout << "Tryb renderowania: " << (renderMode == 0 ? "Wszystkie kształty" : "Tylko zadania z instrukcji") << std::endl;
+    }
+
+    // Sterowanie transformacjami obiektów
+    if (key == GLFW_KEY_UP && action == GLFW_PRESS) {
+        if (rotatingCube) {
+            rotatingCube->translate(glm::vec3(0.0f, 0.5f, 0.0f));
+            std::cout << "Przesunieto szescian w gore" << std::endl;
+        }
+    }
+
+    if (key == GLFW_KEY_DOWN && action == GLFW_PRESS) {
+        if (rotatingCube) {
+            rotatingCube->translate(glm::vec3(0.0f, -0.5f, 0.0f));
+            std::cout << "Przesunieto szescian w dol" << std::endl;
+        }
+    }
+
+    if (key == GLFW_KEY_LEFT && action == GLFW_PRESS) {
+        if (rotatingCube) {
+            rotatingCube->translate(glm::vec3(-0.5f, 0.0f, 0.0f));
+            std::cout << "Przesunieto szescian w lewo" << std::endl;
+        }
+    }
+
+    if (key == GLFW_KEY_RIGHT && action == GLFW_PRESS) {
+        if (rotatingCube) {
+            rotatingCube->translate(glm::vec3(0.5f, 0.0f, 0.0f));
+            std::cout << "Przesunieto szescian w prawo" << std::endl;
+        }
+    }
+
+    if (key == GLFW_KEY_PAGE_UP && action == GLFW_PRESS) {
+        if (rotatingCube) {
+            rotatingCube->translate(glm::vec3(0.0f, 0.0f, -0.5f));
+            std::cout << "Przesunieto szescian do przodu" << std::endl;
+        }
+    }
+
+    if (key == GLFW_KEY_PAGE_DOWN && action == GLFW_PRESS) {
+        if (rotatingCube) {
+            rotatingCube->translate(glm::vec3(0.0f, 0.0f, 0.5f));
+            std::cout << "Przesunieto szescian do tylu" << std::endl;
+        }
+    }
+
+    if (key == GLFW_KEY_KP_ADD && action == GLFW_PRESS) {
+        if (rotatingCube) {
+            rotatingCube->scale(glm::vec3(1.1f));
+            std::cout << "Powiększono szescian" << std::endl;
+        }
+    }
+
+    if (key == GLFW_KEY_KP_SUBTRACT && action == GLFW_PRESS) {
+        if (rotatingCube) {
+            rotatingCube->scale(glm::vec3(0.9f));
+            std::cout << "Pomniejszono szescian" << std::endl;
+        }
+    }
+
+    if (key == GLFW_KEY_R && action == GLFW_PRESS && mods & GLFW_MOD_CONTROL) {
+        if (rotatingCube) {
+            rotatingCube->setRotation(glm::vec3(0.0f));
+            std::cout << "Zresetowano rotację szescianu" << std::endl;
+        }
+    }
+
+    if (key == GLFW_KEY_H && action == GLFW_PRESS) {
+        // Przełącz widoczność litery H
+        static bool letterHVisible = true;
+        letterHVisible = !letterHVisible;
+        if (letterHObject) {
+            letterHObject->setScale(letterHVisible ? glm::vec3(1.0f) : glm::vec3(0.0f));
+            std::cout << "Litera H: " << (letterHVisible ? "widoczna" : "niewidoczna") << std::endl;
+        }
+    }
 }
 
 // Callback myszy
@@ -216,10 +319,21 @@ void scrollCallback(GLFWwindow* window, double xoffset, double yoffset) {
 void mouseButtonCallback(GLFWwindow* window, int button, int action, int mods) {
     if (button == GLFW_MOUSE_BUTTON_LEFT && action == GLFW_PRESS) {
         std::cout << "Lewy przycisk myszy nacisniety" << std::endl;
+
+        // Przykład interakcji z obiektem
+        if (orbitingSphere) {
+            orbitingSphere->setColor(glm::vec3(1.0f, 0.0f, 0.0f));
+            std::cout << "Zmieniono kolor kuli na czerwony" << std::endl;
+        }
     }
 
     if (button == GLFW_MOUSE_BUTTON_RIGHT && action == GLFW_PRESS) {
         std::cout << "Prawy przycisk myszy nacisniety" << std::endl;
+
+        if (orbitingSphere) {
+            orbitingSphere->setColor(glm::vec3(0.2f, 0.8f, 0.2f));
+            std::cout << "Przywrocono kolor kuli" << std::endl;
+        }
     }
 
     if (button == GLFW_MOUSE_BUTTON_MIDDLE && action == GLFW_PRESS) {
@@ -237,22 +351,6 @@ void resizeCallback(GLFWwindow* window, int width, int height) {
     std::cout << "Rozmiar okna zmieniony na: " << width << "x" << height << std::endl;
     glViewport(0, 0, width, height);
 }
-
-// Zmienne globalne dla animacji
-float rotationAngle = 0.0f;
-float cubeRotation = 0.0f;
-GeometryRenderer* geometryRenderer = nullptr;
-int renderMode = 0; // 0 = wszystkie kształty, 1 = tylko zadania z instrukcji
-
-// Macierze
-glm::mat4 projection;
-glm::mat4 view;
-glm::mat4 model;
-
-// Oswietlenie
-glm::vec3 lightPos(5.0f, 5.0f, 5.0f);
-glm::vec3 lightColor(1.0f, 1.0f, 1.0f);
-glm::vec3 viewPos(0.0f, 3.0f, 8.0f);
 
 // Funkcja kompilacji shadera
 GLuint compileShader(GLenum type, const char* source) {
@@ -297,13 +395,14 @@ void createShaderProgram() {
 
 // Funkcja aktualizacji
 void update(Engine& engine) {
+    // Aktualizacja kątów obrotu
     rotationAngle += 0.5f;
     if (rotationAngle > 360.0f) rotationAngle -= 360.0f;
 
     cubeRotation += 1.0f;
     if (cubeRotation > 360.0f) cubeRotation -= 360.0f;
 
-    // Oswietlenie krazy wokol sceny
+    // Oświetlenie krąży wokół sceny
     float lightX = sin(glfwGetTime()) * 5.0f;
     float lightZ = cos(glfwGetTime()) * 5.0f;
     lightPos = glm::vec3(lightX, 5.0f, lightZ);
@@ -330,6 +429,35 @@ void update(Engine& engine) {
             camera.setMovementSpeed(5.0f);
         else
             camera.setMovementSpeed(2.5f);
+    }
+
+    // Animacja obracającego się sześcianu
+    if (rotatingCube) {
+        rotatingCube->setRotation(glm::vec3(cubeRotation, cubeRotation * 0.7f, 0.0f));
+    }
+
+    // Animacja orbitującej kuli
+    if (orbitingSphere) {
+        float time = glfwGetTime();
+        float orbitRadius = 3.0f;
+        glm::vec3 orbitPosition(
+            sin(time) * orbitRadius,
+            1.0f + cos(time * 0.7f) * 0.5f,
+            cos(time) * orbitRadius
+        );
+        orbitingSphere->setPosition(orbitPosition);
+    }
+
+    // Animacja litery H
+    if (letterHObject) {
+        letterHObject->setRotation(glm::vec3(0.0f, rotationAngle * 0.5f, 0.0f));
+    }
+
+    // Animacja obiektu z hierarchią
+    if (parentCube) {
+        float time = glfwGetTime();
+        parentCube->setRotation(glm::vec3(0.0f, rotationAngle * 0.3f, 0.0f));
+        parentCube->translate(glm::vec3(sin(time * 0.5f) * 0.1f, 0.0f, 0.0f));
     }
 }
 
@@ -370,51 +498,31 @@ void render() {
 
     // Przełącz między trybami renderowania
     if (renderMode == 0) {
-        // Tryb domyślny: wszystkie kształty
-        geometryRenderer->setDrawMode(GL_TRIANGLES);
+        // Tryb domyślny: wszystkie kształty używając nowego systemu
 
-        // 1. Rysowanie szescianu w srodku sceny (obracajacy sie)
-        model = glm::mat4(1.0f);
-        model = glm::translate(model, glm::vec3(0.0f, 0.0f, 0.0f));
-        model = glm::rotate(model, glm::radians(cubeRotation), glm::vec3(1.0f, 1.0f, 0.0f));
-        glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
-        glUniform1i(useVertexColorLoc, 0); // Użyj koloru obiektu
-        glUniform3f(objectColorLoc, 1.0f, 0.5f, 0.2f); // Pomaranczowy
-        geometryRenderer->drawCube(glm::vec3(0.0f), glm::vec3(1.0f), glm::vec3(cubeRotation, cubeRotation * 0.7f, 0.0f));
+        // Renderowanie wszystkich obiektów w scenie
+        if (sceneManager) {
+            // Musimy ustawić macierz modelu dla każdego obiektu
+            // W klasach TransformableObject to robią wewnętrznie,
+            // ale tu musimy przekazać ją do shadera
+            for (size_t i = 0; i < sceneManager->getObjectCount(); ++i) {
+                TransformableObject* obj = sceneManager->getObject(i);
+                if (obj) {
+                    glm::mat4 modelMatrix = obj->getModelMatrix();
+                    glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(modelMatrix));
 
-        // 2. Rysowanie kuli po prawej stronie
-        model = glm::mat4(1.0f);
-        model = glm::translate(model, glm::vec3(3.0f, 1.0f, 0.0f));
-        glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
-        glUniform1i(useVertexColorLoc, 0); // Użyj koloru obiektu
-        glUniform3f(objectColorLoc, 0.2f, 0.8f, 0.2f); // Zielony
-        geometryRenderer->drawSphere(glm::vec3(3.0f, 1.0f, 0.0f), 0.8f);
+                    // Ustaw kolor obiektu
+                    glm::vec3 color = obj->getColor();
+                    glUniform3f(objectColorLoc, color.r, color.g, color.b);
+                    glUniform1i(useVertexColorLoc, 0); // Użyj koloru obiektu
 
-        // 3. Rysowanie walca po lewej stronie
-        model = glm::mat4(1.0f);
-        model = glm::translate(model, glm::vec3(-3.0f, 0.0f, 0.0f));
-        glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
-        glUniform1i(useVertexColorLoc, 1); // Użyj kolorów wierzchołków z siatki
-        glUniform3f(objectColorLoc, 0.2f, 0.5f, 1.0f); // Niebieski (backup)
-        geometryRenderer->drawCylinder(glm::vec3(-3.0f, 0.0f, 0.0f), 2.0f, 0.5f);
+                    // Rysuj obiekt
+                    obj->draw();
+                }
+            }
+        }
 
-        // 4. Rysowanie stozka
-        model = glm::mat4(1.0f);
-        model = glm::translate(model, glm::vec3(0.0f, 0.0f, 3.0f));
-        glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
-        glUniform1i(useVertexColorLoc, 1); // Użyj kolorów wierzchołków
-        glUniform3f(objectColorLoc, 1.0f, 0.2f, 0.8f); // Rozowy (backup)
-        geometryRenderer->drawCone(glm::vec3(0.0f, 0.0f, 3.0f), 1.5f, 0.7f);
-
-        // 5. Rysowanie piramidy
-        model = glm::mat4(1.0f);
-        model = glm::translate(model, glm::vec3(0.0f, 0.0f, -3.0f));
-        glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
-        glUniform1i(useVertexColorLoc, 1); // Użyj kolorów wierzchołków
-        glUniform3f(objectColorLoc, 1.0f, 1.0f, 0.0f); // Zolty (backup)
-        geometryRenderer->drawPyramid(glm::vec3(0.0f, 0.0f, -3.0f), 1.0f, 1.5f);
-
-        // 6. Rysowanie plaszczyzny (podlogi)
+        // Rysowanie podłogi (płaszczyzny) starym systemem dla zachowania kompatybilności
         model = glm::mat4(1.0f);
         model = glm::translate(model, glm::vec3(0.0f, -2.0f, 0.0f));
         glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
@@ -422,53 +530,42 @@ void render() {
         glUniform3f(objectColorLoc, 0.3f, 0.3f, 0.3f); // Szary (backup)
         geometryRenderer->drawPlane(glm::vec3(0.0f, -2.0f, 0.0f), glm::vec2(20.0f, 20.0f));
 
-        // 7. Rysowanie torusa
-        model = glm::mat4(1.0f);
-        model = glm::translate(model, glm::vec3(4.0f, 1.0f, 3.0f));
-        glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
-        glUniform1i(useVertexColorLoc, 1); // Użyj kolorów wierzchołków
-        glUniform3f(objectColorLoc, 0.8f, 0.2f, 0.2f); // Czerwony (backup)
-        geometryRenderer->drawTorus(glm::vec3(4.0f, 1.0f, 3.0f), 1.0f, 0.3f);
-
-        // 8. Rysowanie siatki
+        // Rysowanie siatki
         model = glm::mat4(1.0f);
         model = glm::translate(model, glm::vec3(0.0f, -2.0f, 0.0f));
         glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
         glUniform1i(useVertexColorLoc, 1); // Użyj kolorów wierzchołków
         glUniform3f(objectColorLoc, 0.5f, 0.5f, 0.5f); // Szary (backup)
+        geometryRenderer->setDrawMode(GL_LINES);
         geometryRenderer->drawGrid(glm::vec3(0.0f, -2.0f, 0.0f), 20, 1.0f);
-
-        // 9. Ryoswanie "H"
-        letterH.setPosition(glm::vec3(0.0f, 1.5f, 0.0f));
-        letterH.setRotation(glm::vec3(0.0f, letterRotation, 0.0f));
-        glUniform1i(useVertexColorLoc, 1); // Użyj kolorów z wierzchołków
-        model = letterH.getModelMatrix();
-        glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
-        glUniform3f(objectColorLoc, 0.9f, 0.2f, 0.2f);
-        letterH.draw();
-        glUniform1i(useVertexColorLoc, 0);
+        geometryRenderer->setDrawMode(GL_TRIANGLES);
 
     } else {
-        // Tryb zadań z instrukcji
+        // Tryb zadań z instrukcji (stary system)
         glUniform1i(useVertexColorLoc, 1); // Użyj kolorów wierzchołków
+
+        // Tu można dodać kod dla trybu zadań z instrukcji
     }
 
-    // 9. Rysowanie linii (uklad wspolrzednych)
+    // Rysowanie linii (układ współrzędnych)
     geometryRenderer->setDrawMode(GL_LINES);
     glUniform1i(useVertexColorLoc, 0); // Użyj koloru obiektu
-    // Os X - czerwona
+
+    // Oś X - czerwona
     glUniform3f(objectColorLoc, 1.0f, 0.0f, 0.0f);
     geometryRenderer->drawLine(glm::vec3(0.0f), glm::vec3(3.0f, 0.0f, 0.0f));
-    // Os Y - zielona
+
+    // Oś Y - zielona
     glUniform3f(objectColorLoc, 0.0f, 1.0f, 0.0f);
     geometryRenderer->drawLine(glm::vec3(0.0f), glm::vec3(0.0f, 3.0f, 0.0f));
-    // Os Z - niebieska
+
+    // Oś Z - niebieska
     glUniform3f(objectColorLoc, 0.0f, 0.0f, 1.0f);
     geometryRenderer->drawLine(glm::vec3(0.0f), glm::vec3(0.0f, 0.0f, 3.0f));
 
-    // 10. Rysowanie punktu (zrodlo swiatla)
+    // 10. Rysowanie punktu (źródło światła)
     geometryRenderer->setDrawMode(GL_POINTS);
-    glUniform3f(objectColorLoc, 1.0f, 1.0f, 1.0f); // Bialy
+    glUniform3f(objectColorLoc, 1.0f, 1.0f, 1.0f); // Biały
     geometryRenderer->drawPoint(lightPos, 10.0f, glm::vec3(1.0f, 1.0f, 1.0f));
 
     // 11. Rysowanie pozycji kamery (opcjonalnie, dla debugowania)
@@ -502,8 +599,58 @@ int main() {
 
     geometryRenderer = &renderer;
 
-    //Inicjalizacja ComplexObject, a dokładnie litery
-    letterH.createLetterH(2.0f, 3.0f, 0.5f, glm::vec3(0.9f, 0.2f, 0.2f));
+    // Utworzenie menadżera sceny
+    sceneManager = new SceneManager(geometryRenderer);
+
+    // Tworzenie obiektów 3D z transformacjami
+    rotatingCube = sceneManager->createCube("RotatingCube",
+                                            glm::vec3(-2.0f, 1.0f, 0.0f),
+                                            glm::vec3(0.0f),
+                                            glm::vec3(1.0f),
+                                            glm::vec3(1.0f, 0.5f, 0.2f));
+
+    orbitingSphere = sceneManager->createSphere("OrbitingSphere",
+                                                glm::vec3(3.0f, 1.0f, 0.0f),
+                                                0.8f,
+                                                glm::vec3(0.2f, 0.8f, 0.2f));
+
+    letterHObject = sceneManager->createLetterH("LetterH",
+                                                glm::vec3(0.0f, 1.5f, 0.0f),
+                                                2.0f, 3.0f, 0.5f,
+                                                glm::vec3(0.9f, 0.2f, 0.2f));
+
+    // Tworzenie hierarchii obiektów
+    parentCube = sceneManager->createCube("ParentCube",
+                                          glm::vec3(-5.0f, 2.0f, 0.0f),
+                                          glm::vec3(0.0f),
+                                          glm::vec3(1.5f),
+                                          glm::vec3(0.8f, 0.2f, 0.8f));
+
+    childSphere = sceneManager->createSphere("ChildSphere",
+                                             glm::vec3(1.5f, 0.0f, 0.0f),
+                                             0.5f,
+                                             glm::vec3(0.8f, 0.8f, 0.2f));
+
+    // Ustawienie hierarchii (dziecko będzie poruszać się razem z rodzicem)
+    childSphere->setParent(parentCube);
+
+    // Dodanie więcej obiektów do demonstracji
+    sceneManager->createCylinder("Cylinder1",
+                                 glm::vec3(4.0f, 0.0f, -3.0f),
+                                 2.0f, 0.5f,
+                                 glm::vec3(0.2f, 0.5f, 1.0f));
+
+    sceneManager->createCube("StaticCube1",
+                             glm::vec3(-4.0f, 0.5f, 3.0f),
+                             glm::vec3(45.0f, 30.0f, 0.0f),
+                             glm::vec3(1.2f, 0.8f, 0.8f),
+                             glm::vec3(0.8f, 0.6f, 0.2f));
+
+    sceneManager->createSphere("StaticSphere1",
+                               glm::vec3(0.0f, 1.0f, -5.0f),
+                               1.0f,
+                               glm::vec3(0.8f, 0.2f, 0.8f));
+
     // Utworz shadery
     createShaderProgram();
 
@@ -524,6 +671,7 @@ int main() {
 
     std::cout << "\n=== STEROWANIE ===" << std::endl;
     std::cout << "ESC: Wyjscie" << std::endl;
+    std::cout << "F: Autodestrukcja" << std::endl;
     std::cout << "1: Tryb wypelniony (GL_FILL)" << std::endl;
     std::cout << "2: Tryb linie (GL_LINE)" << std::endl;
     std::cout << "3: Tryb punkty (GL_POINT)" << std::endl;
@@ -532,10 +680,21 @@ int main() {
     std::cout << "R: Resetuj kamere" << std::endl;
     std::cout << "Srodkowy przycisk myszy: Wlacz/Wylacz kamere" << std::endl;
     std::cout << "WASD: Poruszanie kamera" << std::endl;
-    std::cout << "QE: Gora/Dol" << std::endl;
+    std::cout << "Ctrl: Dol" << std::endl;
+    std::cout << "Spacja: Gora" << std::endl;
     std::cout << "Shift: Przyspiesz ruch" << std::endl;
     std::cout << "Mysz: Patrzenie" << std::endl;
     std::cout << "Scroll: Zoom" << std::endl;
+    std::cout << "\n=== TRANSFORMACJE OBIEKTOW ===" << std::endl;
+    std::cout << "Strzalki: Przesuwanie szescianu (gora/dol/lewo/prawo)" << std::endl;
+    std::cout << "PageUp/PageDown: Przesuwanie szescianu (przod/tyl)" << std::endl;
+    std::cout << "+ (numeryczne): Powiększ szescian" << std::endl;
+    std::cout << "- (numeryczne): Pomniejsz szescian" << std::endl;
+    std::cout << "Ctrl+R: Resetuj rotację szescianu" << std::endl;
+    std::cout << "H: Przelacz widocznosc litery H" << std::endl;
+    std::cout << "M: Zmien tryb renderowania" << std::endl;
+    std::cout << "Lewy przycisk myszy: Zmien kolor kuli na czerwony" << std::endl;
+    std::cout << "Prawy przycisk myszy: Przywroc kolor kuli" << std::endl;
     std::cout << "==================" << std::endl;
 
     std::cout << "\n=== INFORMACJE ===" << std::endl;
@@ -543,6 +702,7 @@ int main() {
               << camera.getPosition().y << ", " << camera.getPosition().z << ")" << std::endl;
     std::cout << "Tryb kamery: FPS" << std::endl;
     std::cout << "Sterowanie kamera: WLACZONE" << std::endl;
+    std::cout << "Liczba obiektow w scenie: " << sceneManager->getObjectCount() << std::endl;
     std::cout << "==================" << std::endl;
 
     // Lambda dla aktualizacji z referencją do silnika
@@ -557,6 +717,10 @@ int main() {
 
     // Uruchomienie glownej petli
     engine.run(updateWrapper, renderWrapper);
+
+    // Sprzątanie
+    delete sceneManager;
+    sceneManager = nullptr;
 
     geometryRenderer = nullptr;
 

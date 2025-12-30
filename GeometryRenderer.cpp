@@ -394,11 +394,6 @@ void GeometryRenderer::createPyramid() {
         });
     }
 
-    indices.insert(indices.end(), {
-        baseStart + 0, baseStart + 1, baseStart + 2,
-        baseStart + 0, baseStart + 2, baseStart + 3
-    });
-
     /* ===== ŚCIANY BOCZNE ===== */
     for (int i = 0; i < 4; ++i) {
         int next = (i + 1) % 4;

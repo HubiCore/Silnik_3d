@@ -79,10 +79,19 @@ add_executable(${PROJECT_NAME}
         main.cpp
         Engine.cpp
         GeometryRenderer.cpp
-        Camera.cpp
-        Camera.hpp
+        Camera/Camera.cpp
+        Camera/Camera.hpp
         ComplexObject.hpp
         ComplexObject.cpp
+        GeometryRenderer.cpp
+        Transform/Transform.hpp
+        Transform/Transform.cpp
+        Transform/TransformableObject.hpp
+        Transform/TransformableObject.cpp
+        Transform/TransformableGeometry.hpp
+        Transform/TransformableGeometry.cpp
+        SceneManager/SceneManager.hpp
+        SceneManager/SceneManager.cpp
 )
 
 # Add include directories
