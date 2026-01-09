@@ -33,7 +33,7 @@ if (WIN32) # dla szpontów
     set(GLFW_PATH "${CMAKE_SOURCE_DIR}/libs/glfw")
     set(GLM_PATH "${CMAKE_SOURCE_DIR}/libs/glm")
     set(GLEW_PATH "${CMAKE_SOURCE_DIR}/libs/glew")
-    set(STB_PATH "${CMAKE_SOURCE_DIR}/libs/stb")
+    set(STB_PATH "${CMAKE_SOURCE_DIR}/libs/stb-master")
 
     # Sprawdź czy biblioteki istnieją
     if(NOT EXISTS "${GLFW_PATH}")
@@ -49,7 +49,7 @@ if (WIN32) # dla szpontów
     endif()
 
     if(NOT EXISTS "${STB_PATH}")
-        message(FATAL_ERROR "STB not found at: ${GLEW_PATH}")
+        message(FATAL_ERROR "STB not found at: ${STB_PATH}")
     endif()
 
     message(STATUS "GLFW path: ${GLFW_PATH}")
