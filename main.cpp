@@ -729,7 +729,7 @@ int main() {
 
     // Inicjalizacja teksturowanego sześcianu
     texturedCube.create(1.0f);
-    if (!texture.loadTexture("Texture/Texture.png")) { // lub inny plik tekstury
+    if (!texture.loadTexture("../Texture/Texture3.png")) { // lub inny plik tekstury
         std::cout << "Uzywanie domyslnej tekstury..." << std::endl;
         // Możesz tu załadować domyślną teksturę
     }
