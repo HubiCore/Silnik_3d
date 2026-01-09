@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.31)
 project(MyGLFWProject)
 set(CMAKE_CXX_STANDARD 20)
 
-if (UNIX) # dla sigm
+if (UNIX) # dla debili
     find_package(PkgConfig REQUIRED)
     pkg_check_modules(GLFW3 REQUIRED glfw3)
     find_package(OpenGL REQUIRED)
