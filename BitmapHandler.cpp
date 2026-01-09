@@ -3,9 +3,13 @@
 #include <cstring>
 
 #define STB_IMAGE_IMPLEMENTATION
-#include <../stb-master/stb_image.h>
-
-BitmapHandler::BitmapHandler() 
+#ifdef WIN32
+    #include <../stb-master/stb_image.h>
+#endif
+#ifdef __linux__
+    #include <stb/stb_image.h>
+#endif
+BitmapHandler::BitmapHandler()
     : m_textureID(0), m_width(0), m_height(0), 
       m_channels(0), m_hasMipmaps(false) {}
 
