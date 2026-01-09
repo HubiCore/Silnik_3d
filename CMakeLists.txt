@@ -1,3 +1,4 @@
+
 cmake_minimum_required(VERSION 3.31)
 project(MyGLFWProject)
 set(CMAKE_CXX_STANDARD 20)
@@ -5,10 +6,9 @@ set(CMAKE_CXX_STANDARD 20)
 if (UNIX) # dla sigm
     find_package(PkgConfig REQUIRED)
     pkg_check_modules(GLFW3 REQUIRED glfw3)
-
     find_package(OpenGL REQUIRED)
     find_package(glm REQUIRED)
-    #GLEW to brainrot
+    #glew to brainrot
     pkg_check_modules(GLEW REQUIRED glew)
 
     set(MY_INCLUDE_DIRS
@@ -16,6 +16,7 @@ if (UNIX) # dla sigm
             ${OPENGL_INCLUDE_DIR}
             ${GLM_INCLUDE_DIR}
             ${GLEW_INCLUDE_DIRS}
+            ${stb_SOURCE_DIR}
     )
 
     set(MY_LIBRARIES
@@ -29,11 +30,11 @@ if (UNIX) # dla sigm
             ${GLEW_LIBRARY_DIRS}
     )
 endif (UNIX)
-
 if (WIN32) # dla szpontów
     set(GLFW_PATH "${CMAKE_SOURCE_DIR}/libs/glfw")
     set(GLM_PATH "${CMAKE_SOURCE_DIR}/libs/glm")
     set(GLEW_PATH "${CMAKE_SOURCE_DIR}/libs/glew")
+    set(STB_PATH "${CMAKE_SOURCE_DIR}/libs/stb-master")
 
     # Sprawdź czy biblioteki istnieją
     if(NOT EXISTS "${GLFW_PATH}")
@@ -48,9 +49,14 @@ if (WIN32) # dla szpontów
         message(FATAL_ERROR "GLEW not found at: ${GLEW_PATH}")
     endif()
 
+    if(NOT EXISTS "${STB_PATH}")
+        message(FATAL_ERROR "STB not found at: ${STB_PATH}")
+    endif()
+
     message(STATUS "GLFW path: ${GLFW_PATH}")
     message(STATUS "GLM path: ${GLM_PATH}")
     message(STATUS "GLEW path: ${GLEW_PATH}")
+    message(STATUS "STB path: ${STB_PATH}")
 
     # Wybierz bibliotekę GLFW
     if(EXISTS "${GLFW_PATH}/lib-mingw-w64/libglfw3.a")
@@ -92,6 +98,8 @@ add_executable(${PROJECT_NAME}
         Transform/TransformableGeometry.cpp
         SceneManager/SceneManager.hpp
         SceneManager/SceneManager.cpp
+        BitmapHandler.cpp
+        TexuredObject.cpp
 )
 
 # Add include directories

@@ -11,6 +11,8 @@
 #include "Camera/Camera.hpp"
 #include "SceneManager/SceneManager.hpp"
 #include "Transform/TransformableGeometry.hpp"
+#include "BitmapHandler.hpp"
+#include "TexturedObject.hpp"
 #include <iostream>
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
@@ -22,8 +24,7 @@ const char* vertexShaderSource = R"(
 #version 330 core
 layout (location = 0) in vec3 aPos;
 layout (location = 1) in vec3 aNormal;
-layout (location = 2) in vec3 aColor;
-layout (location = 3) in vec2 aTexCoord;
+layout (location = 2) in vec2 aTexCoord;
 
 uniform mat4 model;
 uniform mat4 view;
@@ -31,15 +32,13 @@ uniform mat4 projection;
 
 out vec3 Normal;
 out vec3 FragPos;
-out vec3 VertexColor;
 out vec2 TexCoord;
 
 void main()
 {
     gl_Position = projection * view * model * vec4(aPos, 1.0);
     FragPos = vec3(model * vec4(aPos, 1.0));
-    Normal = aNormal;
-    VertexColor = aColor;
+    Normal = mat3(transpose(inverse(model))) * aNormal;
     TexCoord = aTexCoord;
 }
 )";
@@ -50,18 +49,23 @@ out vec4 FragColor;
 
 in vec3 Normal;
 in vec3 FragPos;
-in vec3 VertexColor;
 in vec2 TexCoord;
 
+uniform sampler2D texture1;
 uniform vec3 objectColor;
 uniform vec3 lightPos;
 uniform vec3 lightColor;
 uniform vec3 viewPos;
-uniform bool useVertexColor;
+uniform bool useTexture;
 
 void main()
 {
-    vec3 finalColor = useVertexColor ? VertexColor : objectColor;
+    vec3 color;
+    if (useTexture) {
+        color = texture(texture1, TexCoord).rgb;
+    } else {
+        color = objectColor;
+    }
 
     // Ambient
     float ambientStrength = 0.1;
@@ -80,7 +84,7 @@ void main()
     float spec = pow(max(dot(viewDir, reflectDir), 0.0), 32);
     vec3 specular = specularStrength * spec * lightColor;
 
-    vec3 result = (ambient + diffuse + specular) * finalColor;
+    vec3 result = (ambient + diffuse + specular) * color;
     FragColor = vec4(result, 1.0);
 }
 )";
@@ -91,6 +95,11 @@ bool autoBackgroundChange = false;
 glm::vec4 currentBackgroundColor(0.1f, 0.1f, 0.1f, 1.0f);
 
 GLuint shaderProgram;
+
+//Texture
+TexturedCube texturedCube;
+BitmapHandler texture;
+bool useTextures = false;
 
 // Camera
 Camera camera(glm::vec3(0.0f, 2.0f, 8.0f));
@@ -145,7 +154,7 @@ void keyCallback(GLFWwindow* window, int key, int scancode, int action, int mods
                 std::cout << "Kolor tla: Czarny" << std::endl;
                 break;
             case 2:
-                currentBackgroundColor = glm::vec4(1.0f, 1.0f, 1.0f, 1.0f);
+                currentBackgroundColor = glm::vec4(1.0f,    1.0f, 1.0f, 1.0f);
                 std::cout << "Kolor tla: Bialy" << std::endl;
                 break;
             case 3:
@@ -538,6 +547,14 @@ void render() {
     // Uzywaj shadera
     glUseProgram(shaderProgram);
 
+    // Rysowanie teksturowanego sześcianu
+    if (useTextures) {
+        glEnable(GL_TEXTURE_2D);
+        texturedCube.drawWithTexture();
+    } else {
+        texturedCube.draw();
+    }
+
     // Pobierz lokalizacje uniformow
     GLint modelLoc = glGetUniformLocation(shaderProgram, "model");
     GLint viewLoc = glGetUniformLocation(shaderProgram, "view");
@@ -709,6 +726,15 @@ int main() {
                                glm::vec3(0.0f, 1.0f, -5.0f),
                                1.0f,
                                glm::vec3(0.8f, 0.2f, 0.8f));
+
+    // Inicjalizacja teksturowanego sześcianu
+    texturedCube.create(1.0f);
+    if (!texture.loadTexture("texture.jpg")) { // lub inny plik tekstury
+        std::cout << "Uzywanie domyslnej tekstury..." << std::endl;
+        // Możesz tu załadować domyślną teksturę
+    }
+    texturedCube.setTexture(std::make_shared<BitmapHandler>(std::move(texture)));
+    texturedCube.setPosition(glm::vec3(0.0f, 1.0f, 0.0f));
 
     // Utworz shadery
     createShaderProgram();
