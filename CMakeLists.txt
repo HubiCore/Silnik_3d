@@ -3,7 +3,7 @@ cmake_minimum_required(VERSION 3.31)
 project(MyGLFWProject)
 set(CMAKE_CXX_STANDARD 20)
 
-if (UNIX) # dla idiotów
+if (UNIX) # dla SIGM
     find_package(PkgConfig REQUIRED)
     pkg_check_modules(GLFW3 REQUIRED glfw3)
     find_package(OpenGL REQUIRED)
@@ -30,7 +30,7 @@ if (UNIX) # dla idiotów
             ${GLEW_LIBRARY_DIRS}
     )
 endif (UNIX)
-if (WIN32) # dla szpontów
+if (WIN32) # dla szpontów (andrzej pedofil wtf)
     set(GLFW_PATH "${CMAKE_SOURCE_DIR}/libs/glfw")
     set(GLM_PATH "${CMAKE_SOURCE_DIR}/libs/glm")
     set(GLEW_PATH "${CMAKE_SOURCE_DIR}/libs/glew")
