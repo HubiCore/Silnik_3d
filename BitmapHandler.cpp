@@ -16,7 +16,7 @@ BitmapHandler::~BitmapHandler() {
 }
 
 bool BitmapHandler::loadWithSTB(const std::string& filePath) {
-    // Flip obrazu dla OpenGL
+    // Flip obrazu dla OpenGLy
     stbi_set_flip_vertically_on_load(true);
     
     unsigned char* data = stbi_load(filePath.c_str(), 

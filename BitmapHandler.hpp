@@ -19,7 +19,7 @@ public:
     BitmapHandler();
     ~BitmapHandler();
 
-    // Ładowanie tekstury
+    // Ładowanie teksturyy
     bool loadTexture(const std::string& filePath);
     bool loadTextureWithMipmaps(const std::string& filePath);
 
