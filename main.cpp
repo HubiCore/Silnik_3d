@@ -99,7 +99,7 @@ GLuint shaderProgram;
 //Texture
 TexturedCube texturedCube;
 BitmapHandler texture;
-bool useTextures = false;
+bool useTextures = true;
 
 // Camera
 Camera camera(glm::vec3(0.0f, 2.0f, 8.0f));
@@ -170,6 +170,11 @@ void keyCallback(GLFWwindow* window, int key, int scancode, int action, int mods
         // Ustaw kolor natychmiast
         globalEngine->setClearColor(currentBackgroundColor.r, currentBackgroundColor.g,
                             currentBackgroundColor.b, currentBackgroundColor.a);
+    }
+
+    if (key == GLFW_KEY_X && action == GLFW_PRESS) {
+        useTextures = !useTextures;
+        std::cout << "Tekstury: " << (useTextures ? "WLACZONE" : "WYLACZONE") << std::endl;
     }
 
     if (key == GLFW_KEY_V && action == GLFW_PRESS) {
@@ -529,7 +534,7 @@ void update(Engine& engine) {
     }
 }
 
-// Funkcja renderowania z uzyciem GeometryRenderer
+
 void render() {
     if (!geometryRenderer) return;
 
@@ -547,14 +552,6 @@ void render() {
     // Uzywaj shadera
     glUseProgram(shaderProgram);
 
-    // Rysowanie teksturowanego sześcianu
-    if (useTextures) {
-        glEnable(GL_TEXTURE_2D);
-        texturedCube.drawWithTexture();
-    } else {
-        texturedCube.draw();
-    }
-
     // Pobierz lokalizacje uniformow
     GLint modelLoc = glGetUniformLocation(shaderProgram, "model");
     GLint viewLoc = glGetUniformLocation(shaderProgram, "view");
@@ -563,7 +560,8 @@ void render() {
     GLint lightPosLoc = glGetUniformLocation(shaderProgram, "lightPos");
     GLint lightColorLoc = glGetUniformLocation(shaderProgram, "lightColor");
     GLint viewPosLoc = glGetUniformLocation(shaderProgram, "viewPos");
-    GLint useVertexColorLoc = glGetUniformLocation(shaderProgram, "useVertexColor");
+    GLint useTextureLoc = glGetUniformLocation(shaderProgram, "useTexture");
+    GLint texture1Loc = glGetUniformLocation(shaderProgram, "texture1");
 
     // Ustaw uniformy wspolne dla wszystkich obiektow
     glUniformMatrix4fv(viewLoc, 1, GL_FALSE, glm::value_ptr(view));
@@ -572,7 +570,29 @@ void render() {
     glUniform3fv(lightColorLoc, 1, glm::value_ptr(lightColor));
     glUniform3fv(viewPosLoc, 1, glm::value_ptr(viewPos));
 
-    // Przełącz między trybami renderowania
+    // Ustawienia tekstury dla teksturowanego sześcianu
+    glUniform1i(useTextureLoc, useTextures ? 1 : 0);
+    glUniform1i(texture1Loc, 0); // Jednostka teksturująca 0
+
+    // Rysowanie teksturowanego sześcianu
+    model = texturedCube.getModelMatrix();
+    glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
+    glUniform3f(objectColorLoc, 1.0f, 1.0f, 1.0f); // Biały kolor (jako fallback)
+
+    if (useTextures) {
+        glEnable(GL_TEXTURE_2D);
+        // Aktywuj jednostkę teksturującą 0 przed rysowaniem
+        glActiveTexture(GL_TEXTURE0);
+        texturedCube.drawWithTexture();
+    } else {
+        texturedCube.draw();
+    }
+
+    // Dla pozostałych obiektów wyłącz tekstury i używaj kolorów
+    glUniform1i(useTextureLoc, 0);
+    glDisable(GL_TEXTURE_2D);
+
+    // Przełączanie między trybami renderowania
     if (renderMode == 0) {
         // Tryb domyślny: wszystkie kształty używając nowego systemu
 
@@ -590,7 +610,6 @@ void render() {
                     // Ustaw kolor obiektu
                     glm::vec3 color = obj->getColor();
                     glUniform3f(objectColorLoc, color.r, color.g, color.b);
-                    glUniform1i(useVertexColorLoc, 0); // Użyj koloru obiektu
 
                     // Rysuj obiekt
                     obj->draw();
@@ -602,30 +621,25 @@ void render() {
         model = glm::mat4(1.0f);
         model = glm::translate(model, glm::vec3(0.0f, -2.0f, 0.0f));
         glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
-        glUniform1i(useVertexColorLoc, 1); // Użyj kolorów wierzchołków
-        glUniform3f(objectColorLoc, 0.3f, 0.3f, 0.3f); // Szary (backup)
+        glUniform3f(objectColorLoc, 0.3f, 0.3f, 0.3f); // Szary
         geometryRenderer->drawPlane(glm::vec3(0.0f, -2.0f, 0.0f), glm::vec2(20.0f, 20.0f));
 
         // Rysowanie siatki
         model = glm::mat4(1.0f);
         model = glm::translate(model, glm::vec3(0.0f, -2.0f, 0.0f));
         glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
-        glUniform1i(useVertexColorLoc, 1); // Użyj kolorów wierzchołków
-        glUniform3f(objectColorLoc, 0.5f, 0.5f, 0.5f); // Szary (backup)
+        glUniform3f(objectColorLoc, 0.5f, 0.5f, 0.5f); // Szary
         geometryRenderer->setDrawMode(GL_LINES);
         geometryRenderer->drawGrid(glm::vec3(0.0f, -2.0f, 0.0f), 20, 1.0f);
         geometryRenderer->setDrawMode(GL_TRIANGLES);
 
     } else {
         // Tryb zadań z instrukcji (stary system)
-        glUniform1i(useVertexColorLoc, 1); // Użyj kolorów wierzchołków
-
         // Tu można dodać kod dla trybu zadań z instrukcji
     }
 
     // Rysowanie linii (układ współrzędnych)
     geometryRenderer->setDrawMode(GL_LINES);
-    glUniform1i(useVertexColorLoc, 0); // Użyj koloru obiektu
 
     // Oś X - czerwona
     glUniform3f(objectColorLoc, 1.0f, 0.0f, 0.0f);
@@ -729,7 +743,7 @@ int main() {
 
     // Inicjalizacja teksturowanego sześcianu
     texturedCube.create(1.0f);
-    if (!texture.loadTexture("../Texture/Texture3.png")) { // lub inny plik tekstury
+    if (!texture.loadTexture("../Texture/Texture4.png")) {
         std::cout << "Uzywanie domyslnej tekstury..." << std::endl;
         // Możesz tu załadować domyślną teksturę
     }
