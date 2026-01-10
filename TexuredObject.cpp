@@ -188,3 +188,246 @@ void TexturedCube::create(float size) {
 void TexturedCube::setupBuffers() {
     // Już zaimplementowane w create()
 }
+
+TexturedSphere::TexturedSphere() : TexturedObject() {}
+
+TexturedSphere::~TexturedSphere() {}
+
+void TexturedSphere::create(float radius, int sectors, int stacks) {
+    std::vector<Vertex> vertices;
+    std::vector<unsigned int> indices;
+
+    float sectorStep = 2 * glm::pi<float>() / sectors;
+    float stackStep = glm::pi<float>() / stacks;
+
+    // Generowanie wierzchołków
+    for (int i = 0; i <= stacks; ++i) {
+        float stackAngle = glm::pi<float>() / 2 - i * stackStep; // Od π/2 do -π/2
+        float xy = radius * cosf(stackAngle);
+        float z = radius * sinf(stackAngle);
+
+        for (int j = 0; j <= sectors; ++j) {
+            float sectorAngle = j * sectorStep;
+
+            float x = xy * cosf(sectorAngle);
+            float y = xy * sinf(sectorAngle);
+
+            // Pozycja - UWAGA: zamieniamy y i z dla OpenGL
+            glm::vec3 position(x, y, z);
+
+            // Normalna (znormalizowany wektor pozycji)
+            glm::vec3 normal = glm::normalize(position);
+
+            // Koordynaty tekstury
+            float s = (float)j / sectors;
+            float t = (float)i / stacks;
+            glm::vec2 texCoord(s, 1.0f - t);
+
+            vertices.push_back({position, normal, texCoord});
+        }
+    }
+
+    // Generowanie indeksów - POPRAWIONE KOLEJNOŚĆ!
+    for (int i = 0; i < stacks; ++i) {
+        int k1 = i * (sectors + 1);
+        int k2 = k1 + sectors + 1;
+
+        for (int j = 0; j < sectors; ++j, ++k1, ++k2) {
+            // 2 trójkąty na każdy kwadrat - PRZECIWNIE DO RUCHU WSKAZÓWEK ZEGARA
+            if (i != 0) {
+                // Pierwszy trójkąt: k1 → k2 → k1+1
+                indices.push_back(k1);
+                indices.push_back(k2);
+                indices.push_back(k1 + 1);
+            }
+
+            if (i != (stacks - 1)) {
+                // Drugi trójkąt: k1+1 → k2 → k2+1
+                indices.push_back(k1 + 1);
+                indices.push_back(k2);
+                indices.push_back(k2 + 1);
+            }
+        }
+    }
+
+    // Reszta kodu bez zmian...
+    m_vertexCount = static_cast<int>(vertices.size());
+    m_indexCount = static_cast<int>(indices.size());
+
+    // Generowanie VAO, VBO, EBO
+    glGenVertexArrays(1, &m_VAO);
+    glGenBuffers(1, &m_VBO);
+    glGenBuffers(1, &m_EBO);
+
+    glBindVertexArray(m_VAO);
+
+    // Wierzchołki
+    glBindBuffer(GL_ARRAY_BUFFER, m_VBO);
+    glBufferData(GL_ARRAY_BUFFER, vertices.size() * sizeof(Vertex),
+                 vertices.data(), GL_STATIC_DRAW);
+
+    // Indeksy
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, m_EBO);
+    glBufferData(GL_ELEMENT_ARRAY_BUFFER, indices.size() * sizeof(unsigned int),
+                 indices.data(), GL_STATIC_DRAW);
+
+    // Atrybuty wierzchołków
+    glEnableVertexAttribArray(0);
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex),
+                         (void*)offsetof(Vertex, position));
+
+    glEnableVertexAttribArray(1);
+    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex),
+                         (void*)offsetof(Vertex, normal));
+
+    glEnableVertexAttribArray(2);
+    glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, sizeof(Vertex),
+                         (void*)offsetof(Vertex, texCoord));
+
+    glBindVertexArray(0);
+
+    std::cout << "Utworzono teksturowaną kulę (radius: " << radius
+              << ", sektory: " << sectors << ", stosy: " << stacks
+              << ") - " << m_vertexCount << " wierzchołków, "
+              << m_indexCount << " indeksow" << std::endl;
+}
+
+void TexturedSphere::setupBuffers() {
+    create(); // Tworzy domyślną kulę
+}
+
+TexturedCylinder::TexturedCylinder() : TexturedObject() {}
+
+TexturedCylinder::~TexturedCylinder() {}
+
+void TexturedCylinder::create(float radius, float height, int sectors) {
+    std::vector<Vertex> vertices;
+    std::vector<unsigned int> indices;
+
+    float sectorStep = 2.0f * glm::pi<float>() / sectors;
+    float halfHeight = height / 2.0f;
+
+    // 1. Centra podstaw
+    vertices.push_back({{0.0f, halfHeight, 0.0f},  {0.0f, 1.0f, 0.0f}, {0.5f, 0.5f}});   // 0 - górny środek
+    vertices.push_back({{0.0f, -halfHeight, 0.0f}, {0.0f, -1.0f, 0.0f}, {0.5f, 0.5f}}); // 1 - dolny środek
+
+    // 2. Wierzchołki obwodu
+    for (int i = 0; i <= sectors; ++i) {
+        float angle = i * sectorStep;
+        float x = cosf(angle);
+        float z = sinf(angle);
+
+        glm::vec3 sideNormal = glm::normalize(glm::vec3(x, 0.0f, z));
+
+        // górna podstawa (punkt na obwodzie)
+        vertices.push_back({
+            {x * radius, halfHeight, z * radius},
+            {0.0f, 1.0f, 0.0f},
+            {x * 0.5f + 0.5f, z * 0.5f + 0.5f}
+        });
+
+        // dolna podstawa (punkt na obwodzie)
+        vertices.push_back({
+            {x * radius, -halfHeight, z * radius},
+            {0.0f, -1.0f, 0.0f},
+            {x * 0.5f + 0.5f, z * 0.5f + 0.5f}
+        });
+
+        // ściana górna (dla ściany bocznej)
+        vertices.push_back({
+            {x * radius, halfHeight, z * radius},
+            sideNormal,
+            {(float)i / sectors, 1.0f}
+        });
+
+        // ściana dolna (dla ściany bocznej)
+        vertices.push_back({
+            {x * radius, -halfHeight, z * radius},
+            sideNormal,
+            {(float)i / sectors, 0.0f}
+        });
+    }
+
+    // 3. Indeksy dla górnej podstawy (CCW patrząc z góry)
+    for (int i = 0; i < sectors; ++i) {
+        indices.push_back(0);                      // środek górny
+        indices.push_back(2 + (i + 1) * 4);       // punkt (i+1) na obwodzie górnej podstawy
+        indices.push_back(2 + i * 4);             // punkt i na obwodzie górnej podstawy
+    }
+
+    // 4. Indeksy dla dolnej podstawy (CCW patrząc od dołu)
+    for (int i = 0; i < sectors; ++i) {
+        indices.push_back(1);                      // środek dolny
+        indices.push_back(3 + i * 4);             // punkt i na obwodzie dolnej podstawy
+        indices.push_back(3 + (i + 1) * 4);       // punkt (i+1) na obwodzie dolnej podstawy
+    }
+
+    // 5. Indeksy dla ścian bocznych
+    for (int i = 0; i < sectors; ++i) {
+        int base = 2 + i * 4;                     // początek aktualnego sektora
+        int next = 2 + (i + 1) * 4;               // początek następnego sektora
+
+        // Pierwszy trójkąt ściany bocznej (przeciwnie do ruchu wskazówek zegara)
+        indices.push_back(base + 2);              // górny punkt aktualnego sektora (ściana)
+        indices.push_back(next + 2);              // górny punkt następnego sektora (ściana)
+        indices.push_back(base + 3);              // dolny punkt aktualnego sektora (ściana)
+
+        // Drugi trójkąt ściany bocznej (przeciwnie do ruchu wskazówek zegara)
+        indices.push_back(base + 3);              // dolny punkt aktualnego sektora (ściana)
+        indices.push_back(next + 2);              // górny punkt następnego sektora (ściana)
+        indices.push_back(next + 3);              // dolny punkt następnego sektora (ściana)
+    }
+
+    m_vertexCount = static_cast<int>(vertices.size());
+    m_indexCount = static_cast<int>(indices.size());
+
+    // Generowanie VAO, VBO, EBO
+    if (m_VAO != 0) {
+        glDeleteVertexArrays(1, &m_VAO);
+        glDeleteBuffers(1, &m_VBO);
+        glDeleteBuffers(1, &m_EBO);
+    }
+
+    glGenVertexArrays(1, &m_VAO);
+    glGenBuffers(1, &m_VBO);
+    glGenBuffers(1, &m_EBO);
+
+    glBindVertexArray(m_VAO);
+
+    // Wierzchołki
+    glBindBuffer(GL_ARRAY_BUFFER, m_VBO);
+    glBufferData(GL_ARRAY_BUFFER, vertices.size() * sizeof(Vertex),
+                 vertices.data(), GL_STATIC_DRAW);
+
+    // Indeksy
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, m_EBO);
+    glBufferData(GL_ELEMENT_ARRAY_BUFFER, indices.size() * sizeof(unsigned int),
+                 indices.data(), GL_STATIC_DRAW);
+
+    // Atrybuty wierzchołków
+    // Pozycja
+    glEnableVertexAttribArray(0);
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex),
+                         (void*)offsetof(Vertex, position));
+
+    // Normalna
+    glEnableVertexAttribArray(1);
+    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex),
+                         (void*)offsetof(Vertex, normal));
+
+    // Koordynaty tekstury
+    glEnableVertexAttribArray(2);
+    glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, sizeof(Vertex),
+                         (void*)offsetof(Vertex, texCoord));
+
+    glBindVertexArray(0);
+
+    std::cout << "Utworzono teksturowany cylinder (radius: " << radius
+              << ", height: " << height << ", sektory: " << sectors
+              << ") - " << m_vertexCount << " wierzchołków, "
+              << m_indexCount << " indeksów" << std::endl;
+}
+
+void TexturedCylinder::setupBuffers() {
+    create(); // Tworzy domyślny cylinder
+}

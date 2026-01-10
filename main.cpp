@@ -98,7 +98,12 @@ GLuint shaderProgram;
 
 //Texture
 TexturedCube texturedCube;
-BitmapHandler texture;
+TexturedSphere texturedSphere;
+TexturedCylinder texturedCylinder;
+
+BitmapHandler textureSphere; //tekstura dla kuli
+BitmapHandler textureCylinder; //tekstura dla cylindra
+BitmapHandler texture; //teksura dla sześcianu
 bool useTextures = true;
 
 // Camera
@@ -132,7 +137,9 @@ TransformableObject* rotatingCube = nullptr;
 TransformableObject* orbitingSphere = nullptr;
 ComplexObjectWithTransform* letterHObject = nullptr;
 TransformableObject* parentCube = nullptr;
-TransformableObject* childSphere = nullptr;
+TransformableObject* childSphere1 = nullptr;
+TransformableObject* childSphere2 = nullptr;
+
 
 // Callback klawiatury
 void keyCallback(GLFWwindow* window, int key, int scancode, int action, int mods) {
@@ -577,15 +584,40 @@ void render() {
     // Rysowanie teksturowanego sześcianu
     model = texturedCube.getModelMatrix();
     glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
-    glUniform3f(objectColorLoc, 1.0f, 1.0f, 1.0f); // Biały kolor (jako fallback)
+    glUniform3f(objectColorLoc, 1.0f, 1.0f, 1.0f);
 
     if (useTextures) {
         glEnable(GL_TEXTURE_2D);
-        // Aktywuj jednostkę teksturującą 0 przed rysowaniem
         glActiveTexture(GL_TEXTURE0);
         texturedCube.drawWithTexture();
     } else {
         texturedCube.draw();
+    }
+
+    //Rysowanie teksturowanej kuli
+    model = texturedSphere.getModelMatrix();
+    glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
+    glUniform3f(objectColorLoc, 1.0f, 1.0f, 1.0f);
+
+    if (useTextures) {
+        glEnable(GL_TEXTURE_2D);
+        glActiveTexture(GL_TEXTURE0);
+        texturedSphere.drawWithTexture();
+    } else {
+        texturedSphere.draw();
+    }
+
+    //Rysowanie teksturowanego cylindra
+    model = texturedCylinder.getModelMatrix();
+    glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
+    glUniform3f(objectColorLoc, 1.0f, 1.0f, 1.0f);
+
+    if (useTextures) {
+        glEnable(GL_TEXTURE_2D);
+        glActiveTexture(GL_TEXTURE0);
+        texturedCylinder.drawWithTexture();
+    } else {
+        texturedCylinder.draw();
     }
 
     // Dla pozostałych obiektów wyłącz tekstury i używaj kolorów
@@ -716,13 +748,19 @@ int main() {
                                           glm::vec3(1.5f),
                                           glm::vec3(0.8f, 0.2f, 0.8f));
 
-    childSphere = sceneManager->createSphere("ChildSphere",
+    childSphere1 = sceneManager->createSphere("ChildSphere1",
                                              glm::vec3(1.5f, 0.0f, 0.0f),
                                              0.5f,
                                              glm::vec3(0.8f, 0.8f, 0.2f));
 
+    childSphere2 = sceneManager->createSphere("ChildSphere2",
+                                             glm::vec3(-3.0f, 0.0f, 0.0f),
+                                             0.5f,
+                                             glm::vec3(0.8f, 0.8f, 0.2f));
+
     // Ustawienie hierarchii (dziecko będzie poruszać się razem z rodzicem)
-    childSphere->setParent(parentCube);
+    childSphere1->setParent(parentCube);
+    childSphere2->setParent(childSphere1);
 
     // Dodanie więcej obiektów do demonstracji
     sceneManager->createCylinder("Cylinder1",
@@ -736,19 +774,31 @@ int main() {
                              glm::vec3(1.2f, 0.8f, 0.8f),
                              glm::vec3(0.8f, 0.6f, 0.2f));
 
-    sceneManager->createSphere("StaticSphere1",
-                               glm::vec3(0.0f, 1.0f, -5.0f),
-                               1.0f,
-                               glm::vec3(0.8f, 0.2f, 0.8f));
-
     // Inicjalizacja teksturowanego sześcianu
     texturedCube.create(1.0f);
     if (!texture.loadTexture("../Texture/Texture4.png")) {
-        std::cout << "Uzywanie domyslnej tekstury..." << std::endl;
-        // Możesz tu załadować domyślną teksturę
+        if (!texture.loadTexture("../Texture/Wood_Texture.png")) {
+            std::cout << "Nie udalo sie zaladowac tekstury" << std::endl;
+        }
     }
     texturedCube.setTexture(std::make_shared<BitmapHandler>(std::move(texture)));
     texturedCube.setPosition(glm::vec3(0.0f, 1.0f, 0.0f));
+
+    texturedSphere.create(0.5f); // Kula o promieniu 1.5
+    if (!textureSphere.loadTexture("../Texture/Wood_Texture.png")) {
+        if (!textureSphere.loadTexture("../Texture/Wood_Texture.png")) {
+            std::cout << "Nie udalo sie zaladowac tekstury" << std::endl;
+        }    }
+    texturedSphere.setTexture(std::make_shared<BitmapHandler>(std::move(textureSphere)));
+    texturedSphere.setPosition(glm::vec3(-3.0f, 1.5f, 4.0f));
+
+    texturedCylinder.create(1.0f, 3.0f); // Cylinder: radius=1.0, height=3.0
+    if (!textureCylinder.loadTexture("../Texture/Wood_Texture.png")) {
+        if (!textureCylinder.loadTexture("../Texture/Wood_Texture.png")) {
+            std::cout << "Nie udalo sie zaladowac tekstury" << std::endl;
+        }    }
+    texturedCylinder.setTexture(std::make_shared<BitmapHandler>(std::move(textureCylinder)));
+    texturedCylinder.setPosition(glm::vec3(0.0f, 1.5f, -5.0f));
 
     // Utworz shadery
     createShaderProgram();

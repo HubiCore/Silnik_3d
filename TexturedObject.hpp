@@ -73,4 +73,38 @@ public:
     void create(float size = 1.0f);
 };
 
+class TexturedSphere : public TexturedObject {
+private:
+    struct Vertex {
+        glm::vec3 position;
+        glm::vec3 normal;
+        glm::vec2 texCoord;
+    };
+
+    void setupBuffers() override;
+
+public:
+    TexturedSphere();
+    ~TexturedSphere();
+
+    void create(float radius = 1.0f, int sectors = 32, int stacks = 32);
+};
+
+class TexturedCylinder : public TexturedObject {
+private:
+    struct Vertex {
+        glm::vec3 position;
+        glm::vec3 normal;
+        glm::vec2 texCoord;
+    };
+
+    void setupBuffers() override;
+
+public:
+    TexturedCylinder();
+    ~TexturedCylinder();
+
+    void create(float radius = 1.0f, float height = 2.0f, int sectors = 32);
+};
+
 #endif // TEXTURED_OBJECT_HPP
