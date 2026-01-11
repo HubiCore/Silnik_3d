@@ -793,7 +793,7 @@ int main() {
     texturedSphere.setPosition(glm::vec3(-3.0f, 1.5f, 4.0f));
 
     texturedCylinder.create(1.0f, 3.0f); // Cylinder: radius=1.0, height=3.0
-    if (!textureCylinder.loadTexture("../Texture/Wood_Texture.png")) {
+    if (!textureCylinder.loadTexture("../Texture/harnas.png")) {
         if (!textureCylinder.loadTexture("../Texture/Wood_Texture.png")) {
             std::cout << "Nie udalo sie zaladowac tekstury" << std::endl;
         }    }
