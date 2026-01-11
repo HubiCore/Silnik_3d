@@ -86,7 +86,9 @@ void TexturedObject::drawWithTexture() const {
     draw();
 }
 
-// Implementacja TexturedCube
+// ============================================
+// TexturedCube Implementation
+// ============================================
 
 TexturedCube::TexturedCube() : TexturedObject() {}
 
@@ -94,45 +96,45 @@ TexturedCube::~TexturedCube() {}
 
 void TexturedCube::create(float size) {
     float halfSize = size / 2.0f;
-    
+
     std::vector<Vertex> vertices = {
         // Front
         {{-halfSize, -halfSize,  halfSize}, {0.0f, 0.0f, 1.0f}, {0.0f, 0.0f}},
         {{ halfSize, -halfSize,  halfSize}, {0.0f, 0.0f, 1.0f}, {1.0f, 0.0f}},
         {{ halfSize,  halfSize,  halfSize}, {0.0f, 0.0f, 1.0f}, {1.0f, 1.0f}},
         {{-halfSize,  halfSize,  halfSize}, {0.0f, 0.0f, 1.0f}, {0.0f, 1.0f}},
-        
+
         // Back
         {{-halfSize, -halfSize, -halfSize}, {0.0f, 0.0f, -1.0f}, {1.0f, 0.0f}},
         {{-halfSize,  halfSize, -halfSize}, {0.0f, 0.0f, -1.0f}, {1.0f, 1.0f}},
         {{ halfSize,  halfSize, -halfSize}, {0.0f, 0.0f, -1.0f}, {0.0f, 1.0f}},
         {{ halfSize, -halfSize, -halfSize}, {0.0f, 0.0f, -1.0f}, {0.0f, 0.0f}},
-        
+
         // Top
         {{-halfSize,  halfSize, -halfSize}, {0.0f, 1.0f, 0.0f}, {0.0f, 1.0f}},
         {{-halfSize,  halfSize,  halfSize}, {0.0f, 1.0f, 0.0f}, {0.0f, 0.0f}},
         {{ halfSize,  halfSize,  halfSize}, {0.0f, 1.0f, 0.0f}, {1.0f, 0.0f}},
         {{ halfSize,  halfSize, -halfSize}, {0.0f, 1.0f, 0.0f}, {1.0f, 1.0f}},
-        
+
         // Bottom
         {{-halfSize, -halfSize, -halfSize}, {0.0f, -1.0f, 0.0f}, {1.0f, 1.0f}},
         {{ halfSize, -halfSize, -halfSize}, {0.0f, -1.0f, 0.0f}, {0.0f, 1.0f}},
         {{ halfSize, -halfSize,  halfSize}, {0.0f, -1.0f, 0.0f}, {0.0f, 0.0f}},
         {{-halfSize, -halfSize,  halfSize}, {0.0f, -1.0f, 0.0f}, {1.0f, 0.0f}},
-        
+
         // Right
         {{ halfSize, -halfSize, -halfSize}, {1.0f, 0.0f, 0.0f}, {1.0f, 0.0f}},
         {{ halfSize,  halfSize, -halfSize}, {1.0f, 0.0f, 0.0f}, {1.0f, 1.0f}},
         {{ halfSize,  halfSize,  halfSize}, {1.0f, 0.0f, 0.0f}, {0.0f, 1.0f}},
         {{ halfSize, -halfSize,  halfSize}, {1.0f, 0.0f, 0.0f}, {0.0f, 0.0f}},
-        
+
         // Left
         {{-halfSize, -halfSize, -halfSize}, {-1.0f, 0.0f, 0.0f}, {0.0f, 0.0f}},
         {{-halfSize, -halfSize,  halfSize}, {-1.0f, 0.0f, 0.0f}, {1.0f, 0.0f}},
         {{-halfSize,  halfSize,  halfSize}, {-1.0f, 0.0f, 0.0f}, {1.0f, 1.0f}},
         {{-halfSize,  halfSize, -halfSize}, {-1.0f, 0.0f, 0.0f}, {0.0f, 1.0f}}
     };
-    
+
     std::vector<unsigned int> indices = {
         0, 1, 2, 2, 3, 0,    // Front
         4, 5, 6, 6, 7, 4,    // Back
@@ -141,53 +143,57 @@ void TexturedCube::create(float size) {
         16, 17, 18, 18, 19, 16, // Right
         20, 21, 22, 22, 23, 20  // Left
     };
-    
+
     m_vertexCount = static_cast<int>(vertices.size());
     m_indexCount = static_cast<int>(indices.size());
-    
+
     // Generowanie VAO, VBO, EBO
     glGenVertexArrays(1, &m_VAO);
     glGenBuffers(1, &m_VBO);
     glGenBuffers(1, &m_EBO);
-    
+
     glBindVertexArray(m_VAO);
-    
+
     // Wierzchołki
     glBindBuffer(GL_ARRAY_BUFFER, m_VBO);
-    glBufferData(GL_ARRAY_BUFFER, vertices.size() * sizeof(Vertex), 
+    glBufferData(GL_ARRAY_BUFFER, vertices.size() * sizeof(Vertex),
                  vertices.data(), GL_STATIC_DRAW);
-    
+
     // Indeksy
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, m_EBO);
     glBufferData(GL_ELEMENT_ARRAY_BUFFER, indices.size() * sizeof(unsigned int),
                  indices.data(), GL_STATIC_DRAW);
-    
+
     // Atrybuty wierzchołków
     // Pozycja
     glEnableVertexAttribArray(0);
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), 
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex),
                          (void*)offsetof(Vertex, position));
-    
+
     // Normalna
     glEnableVertexAttribArray(1);
     glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex),
                          (void*)offsetof(Vertex, normal));
-    
+
     // Koordynaty tekstury
     glEnableVertexAttribArray(2);
     glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, sizeof(Vertex),
                          (void*)offsetof(Vertex, texCoord));
-    
+
     glBindVertexArray(0);
-    
-    std::cout << "Utworzono teksturowany sześcian (" 
-              << m_vertexCount << " wierzchołków, " 
+
+    std::cout << "Utworzono teksturowany sześcian ("
+              << m_vertexCount << " wierzchołków, "
               << m_indexCount << " indeksów)" << std::endl;
 }
 
 void TexturedCube::setupBuffers() {
     // Już zaimplementowane w create()
 }
+
+// ============================================
+// TexturedSphere Implementation
+// ============================================
 
 TexturedSphere::TexturedSphere() : TexturedObject() {}
 
@@ -212,7 +218,7 @@ void TexturedSphere::create(float radius, int sectors, int stacks) {
             float x = xy * cosf(sectorAngle);
             float y = xy * sinf(sectorAngle);
 
-            // Pozycja - UWAGA: zamieniamy y i z dla OpenGL
+            // Pozycja
             glm::vec3 position(x, y, z);
 
             // Normalna (znormalizowany wektor pozycji)
@@ -221,28 +227,26 @@ void TexturedSphere::create(float radius, int sectors, int stacks) {
             // Koordynaty tekstury
             float s = (float)j / sectors;
             float t = (float)i / stacks;
-            glm::vec2 texCoord(s, 1.0f - t);
+            glm::vec2 texCoord(s, 1.0f - t); // Odwracamy t dla poprawnego układu tekstur
 
             vertices.push_back({position, normal, texCoord});
         }
     }
 
-    // Generowanie indeksów - POPRAWIONE KOLEJNOŚĆ!
+    // Generowanie indeksów
     for (int i = 0; i < stacks; ++i) {
         int k1 = i * (sectors + 1);
         int k2 = k1 + sectors + 1;
 
         for (int j = 0; j < sectors; ++j, ++k1, ++k2) {
-            // 2 trójkąty na każdy kwadrat - PRZECIWNIE DO RUCHU WSKAZÓWEK ZEGARA
+            // 2 trójkąty na każdy kwadrat
             if (i != 0) {
-                // Pierwszy trójkąt: k1 → k2 → k1+1
                 indices.push_back(k1);
                 indices.push_back(k2);
                 indices.push_back(k1 + 1);
             }
 
             if (i != (stacks - 1)) {
-                // Drugi trójkąt: k1+1 → k2 → k2+1
                 indices.push_back(k1 + 1);
                 indices.push_back(k2);
                 indices.push_back(k2 + 1);
@@ -250,7 +254,6 @@ void TexturedSphere::create(float radius, int sectors, int stacks) {
         }
     }
 
-    // Reszta kodu bez zmian...
     m_vertexCount = static_cast<int>(vertices.size());
     m_indexCount = static_cast<int>(indices.size());
 
@@ -272,14 +275,17 @@ void TexturedSphere::create(float radius, int sectors, int stacks) {
                  indices.data(), GL_STATIC_DRAW);
 
     // Atrybuty wierzchołków
+    // Pozycja
     glEnableVertexAttribArray(0);
     glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex),
                          (void*)offsetof(Vertex, position));
 
+    // Normalna
     glEnableVertexAttribArray(1);
     glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex),
                          (void*)offsetof(Vertex, normal));
 
+    // Koordynaty tekstury
     glEnableVertexAttribArray(2);
     glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, sizeof(Vertex),
                          (void*)offsetof(Vertex, texCoord));
@@ -289,12 +295,16 @@ void TexturedSphere::create(float radius, int sectors, int stacks) {
     std::cout << "Utworzono teksturowaną kulę (radius: " << radius
               << ", sektory: " << sectors << ", stosy: " << stacks
               << ") - " << m_vertexCount << " wierzchołków, "
-              << m_indexCount << " indeksow" << std::endl;
+              << m_indexCount << " indeksów" << std::endl;
 }
 
 void TexturedSphere::setupBuffers() {
     create(); // Tworzy domyślną kulę
 }
+
+// ============================================
+// TexturedCylinder Implementation
+// ============================================
 
 TexturedCylinder::TexturedCylinder() : TexturedObject() {}
 
@@ -405,17 +415,14 @@ void TexturedCylinder::create(float radius, float height, int sectors) {
                  indices.data(), GL_STATIC_DRAW);
 
     // Atrybuty wierzchołków
-    // Pozycja
     glEnableVertexAttribArray(0);
     glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex),
                          (void*)offsetof(Vertex, position));
 
-    // Normalna
     glEnableVertexAttribArray(1);
     glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex),
                          (void*)offsetof(Vertex, normal));
 
-    // Koordynaty tekstury
     glEnableVertexAttribArray(2);
     glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, sizeof(Vertex),
                          (void*)offsetof(Vertex, texCoord));
