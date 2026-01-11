@@ -87,6 +87,7 @@ public:
     TexturedSphere();
     ~TexturedSphere();
 
+
     void create(float radius = 1.0f, int sectors = 32, int stacks = 32);
 };
 

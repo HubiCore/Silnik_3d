@@ -790,15 +790,16 @@ int main() {
             std::cout << "Nie udalo sie zaladowac tekstury" << std::endl;
         }    }
     texturedSphere.setTexture(std::make_shared<BitmapHandler>(std::move(textureSphere)));
-    texturedSphere.setPosition(glm::vec3(-3.0f, 1.5f, 4.0f));
+    texturedSphere.setPosition(glm::vec3(0.0f, 1.5f, -5.0f));
 
     texturedCylinder.create(1.0f, 3.0f); // Cylinder: radius=1.0, height=3.0
+    texturedCylinder.rotate(glm::vec3(0.0f, 120.0f, 0.0f));
     if (!textureCylinder.loadTexture("../Texture/harnas.png")) {
         if (!textureCylinder.loadTexture("../Texture/Wood_Texture.png")) {
             std::cout << "Nie udalo sie zaladowac tekstury" << std::endl;
         }    }
     texturedCylinder.setTexture(std::make_shared<BitmapHandler>(std::move(textureCylinder)));
-    texturedCylinder.setPosition(glm::vec3(0.0f, 1.5f, -5.0f));
+    texturedCylinder.setPosition(glm::vec3(-3.0f, 1.5f, 4.0f));
 
     // Utworz shadery
     createShaderProgram();
