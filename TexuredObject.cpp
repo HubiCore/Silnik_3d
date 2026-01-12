@@ -347,14 +347,14 @@ void TexturedCylinder::create(float radius, float height, int sectors) {
         vertices.push_back({
             {x * radius, halfHeight, z * radius},
             sideNormal,
-            {(float)i / sectors, 1.0f}
+            {1.0f - (float)i / sectors, 1.0f}
         });
 
         // ściana dolna (dla ściany bocznej)
         vertices.push_back({
             {x * radius, -halfHeight, z * radius},
             sideNormal,
-            {(float)i / sectors, 0.0f}
+            {1.0f - (float)i / sectors, 0.0f}
         });
     }
 
