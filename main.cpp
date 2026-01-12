@@ -19,7 +19,7 @@
 #include <glm/gtc/type_ptr.hpp>
 #include <cmath>
 
-// Simple shader program
+// Simple shader program with multiple lights
 const char* vertexShaderSource = R"(
 #version 330 core
 layout (location = 0) in vec3 aPos;
@@ -53,10 +53,69 @@ in vec2 TexCoord;
 
 uniform sampler2D texture1;
 uniform vec3 objectColor;
-uniform vec3 lightPos;
-uniform vec3 lightColor;
 uniform vec3 viewPos;
 uniform bool useTexture;
+
+// Struktura dla światła
+struct Light {
+    vec3 position;
+    vec3 direction;
+    vec3 color;
+    float ambientIntensity;
+    float diffuseIntensity;
+    float specularIntensity;
+    float constant;
+    float linear;
+    float quadratic;
+    float cutoff; // dla światła stożkowego
+    float outerCutoff; // dla światła stożkowego
+    int type; // 0 = punktowe, 1 = kierunkowe, 2 = stożkowe
+};
+
+#define MAX_LIGHTS 8
+uniform Light lights[MAX_LIGHTS];
+uniform int activeLightCount;
+uniform int currentLightMode; // 0 = tylko pierwsze światło, 1 = tylko drugie światło, 2 = wszystkie
+
+// Funkcja obliczająca oświetlenie Phonga dla danego światła
+vec3 calculatePhongLight(Light light, vec3 normal, vec3 fragPos, vec3 viewDir, vec3 objectColor) {
+    vec3 lightDir;
+    float attenuation = 1.0;
+
+    // Obliczenie kierunku światła i tłumienia w zależności od typu
+    if (light.type == 1) { // światło kierunkowe
+        lightDir = normalize(-light.direction);
+        attenuation = 1.0; // brak tłumienia dla światła kierunkowego
+    } else { // światło punktowe lub stożkowe
+        lightDir = normalize(light.position - fragPos);
+        float distance = length(light.position - fragPos);
+        attenuation = 1.0 / (light.constant + light.linear * distance +
+                           light.quadratic * (distance * distance));
+
+        // Sprawdzenie dla światła stożkowego
+        if (light.type == 2) {
+            float theta = dot(lightDir, normalize(-light.direction));
+            float epsilon = light.cutoff - light.outerCutoff;
+            float intensity = clamp((theta - light.outerCutoff) / epsilon, 0.0, 1.0);
+            attenuation *= intensity;
+        }
+    }
+
+    // Ambient
+    vec3 ambient = light.ambientIntensity * light.color;
+
+    // Diffuse
+    float diff = max(dot(normal, lightDir), 0.0);
+    vec3 diffuse = light.diffuseIntensity * diff * light.color;
+
+    // Specular
+    vec3 reflectDir = reflect(-lightDir, normal);
+    float spec = pow(max(dot(viewDir, reflectDir), 0.0), 32.0);
+    vec3 specular = light.specularIntensity * spec * light.color;
+
+    // Połącz wszystkie składowe
+    return (ambient + diffuse + specular) * attenuation;
+}
 
 void main()
 {
@@ -67,24 +126,27 @@ void main()
         color = objectColor;
     }
 
-    // Ambient
-    float ambientStrength = 0.1;
-    vec3 ambient = ambientStrength * lightColor;
-
-    // Diffuse
-    vec3 norm = normalize(Normal);
-    vec3 lightDir = normalize(lightPos - FragPos);
-    float diff = max(dot(norm, lightDir), 0.0);
-    vec3 diffuse = diff * lightColor;
-
-    // Specular
-    float specularStrength = 0.5;
+    vec3 normal = normalize(Normal);
     vec3 viewDir = normalize(viewPos - FragPos);
-    vec3 reflectDir = reflect(-lightDir, norm);
-    float spec = pow(max(dot(viewDir, reflectDir), 0.0), 32);
-    vec3 specular = specularStrength * spec * lightColor;
+    vec3 result = vec3(0.0);
 
-    vec3 result = (ambient + diffuse + specular) * color;
+    // Oblicz oświetlenie dla aktywnych świateł
+    if (currentLightMode == 0) {
+        // Tylko pierwsze światło
+        result += calculatePhongLight(lights[0], normal, FragPos, viewDir, color);
+    } else if (currentLightMode == 1) {
+        // Tylko drugie światło
+        result += calculatePhongLight(lights[1], normal, FragPos, viewDir, color);
+    } else if (currentLightMode == 2) {
+        // Wszystkie światła
+        for (int i = 0; i < min(activeLightCount, 2); i++) {
+            result += calculatePhongLight(lights[i], normal, FragPos, viewDir, color);
+        }
+    }
+
+    // Mieszanie z kolorem obiektu
+    result *= color;
+
     FragColor = vec4(result, 1.0);
 }
 )";
@@ -126,9 +188,25 @@ glm::mat4 projection;
 glm::mat4 view;
 glm::mat4 model;
 
-// Oświetlenie
-glm::vec3 lightPos(5.0f, 5.0f, 5.0f);
-glm::vec3 lightColor(1.0f, 1.0f, 1.0f);
+// Oświetlenie - dwa źródła światła
+struct Light {
+    glm::vec3 position;
+    glm::vec3 direction;
+    glm::vec3 color;
+    float ambientIntensity;
+    float diffuseIntensity;
+    float specularIntensity;
+    float constant;
+    float linear;
+    float quadratic;
+    float cutoff;
+    float outerCutoff;
+    int type; // 0 = punktowe, 1 = kierunkowe, 2 = stożkowe
+};
+
+Light lights[8]; // Maksymalnie 8 świateł jak w OpenGL
+int activeLightCount = 2; // Aktywnych 2 światła
+int currentLightMode = 2; // 0 = tylko pierwsze, 1 = tylko drugie, 2 = wszystkie
 glm::vec3 viewPos(0.0f, 3.0f, 8.0f);
 
 // Zmienne globalne dla nowego systemu transformacji
@@ -349,6 +427,48 @@ void keyCallback(GLFWwindow* window, int key, int scancode, int action, int mods
             std::cout << "Litera H: " << (letterHVisible ? "widoczna" : "niewidoczna") << std::endl;
         }
     }
+
+    // Sterowanie oświetleniem - klawisz L do zmiany trybu oświetlenia
+    if (key == GLFW_KEY_L && action == GLFW_PRESS) {
+        currentLightMode = (currentLightMode + 1) % 3;
+        std::string modeName;
+        switch(currentLightMode) {
+            case 0:
+                modeName = "TYLKO PIERWSZE SWIATLO (punktowe)";
+                break;
+            case 1:
+                modeName = "TYLKO DRUGIE SWIATLO (kierunkowe)";
+                break;
+            case 2:
+                modeName = "WSZYSTKIE SWIATLA";
+                break;
+        }
+        std::cout << "Tryb oswietlenia: " << modeName << std::endl;
+    }
+
+    // Zmiana typu pierwszego światła - klawisz O
+    if (key == GLFW_KEY_O && action == GLFW_PRESS) {
+        lights[0].type = (lights[0].type + 1) % 3;
+        std::string typeName;
+        switch(lights[0].type) {
+            case 0: typeName = "PUNKTOWE"; break;
+            case 1: typeName = "KIERUNKOWE"; break;
+            case 2: typeName = "STOZKOWE"; break;
+        }
+        std::cout << "Pierwsze swiatlo: " << typeName << std::endl;
+    }
+
+    // Zmiana typu drugiego światła - klawisz P
+    if (key == GLFW_KEY_P && action == GLFW_PRESS) {
+        lights[1].type = (lights[1].type + 1) % 3;
+        std::string typeName;
+        switch(lights[1].type) {
+            case 0: typeName = "PUNKTOWE"; break;
+            case 1: typeName = "KIERUNKOWE"; break;
+            case 2: typeName = "STOZKOWE"; break;
+        }
+        std::cout << "Drugie swiatlo: " << typeName << std::endl;
+    }
 }
 
 // Callback myszy
@@ -456,6 +576,37 @@ void createShaderProgram() {
     glDeleteShader(fragmentShader);
 }
 
+// Inicjalizacja świateł
+void initializeLights() {
+    // Pierwsze światło - punktowe (jak w oryginalnym kodzie)
+    lights[0].position = glm::vec3(5.0f, 5.0f, 5.0f);
+    lights[0].direction = glm::vec3(0.0f, -1.0f, 0.0f);
+    lights[0].color = glm::vec3(1.0f, 1.0f, 1.0f);
+    lights[0].ambientIntensity = 0.1f;
+    lights[0].diffuseIntensity = 0.8f;
+    lights[0].specularIntensity = 0.5f;
+    lights[0].constant = 1.0f;
+    lights[0].linear = 0.09f;
+    lights[0].quadratic = 0.032f;
+    lights[0].cutoff = glm::cos(glm::radians(12.5f));
+    lights[0].outerCutoff = glm::cos(glm::radians(17.5f));
+    lights[0].type = 0; // punktowe
+
+    // Drugie światło - kierunkowe
+    lights[1].position = glm::vec3(0.0f, 10.0f, 0.0f);
+    lights[1].direction = glm::vec3(0.0f, -1.0f, 0.0f);
+    lights[1].color = glm::vec3(0.8f, 0.8f, 1.0f); // niebieskawa barwa
+    lights[1].ambientIntensity = 0.2f;
+    lights[1].diffuseIntensity = 0.6f;
+    lights[1].specularIntensity = 0.3f;
+    lights[1].constant = 1.0f;
+    lights[1].linear = 0.09f;
+    lights[1].quadratic = 0.032f;
+    lights[1].cutoff = glm::cos(glm::radians(12.5f));
+    lights[1].outerCutoff = glm::cos(glm::radians(17.5f));
+    lights[1].type = 1; // kierunkowe
+}
+
 // Funkcja aktualizacji
 void update(Engine& engine) {
 
@@ -482,10 +633,13 @@ void update(Engine& engine) {
     cubeRotation += 1.0f;
     if (cubeRotation > 360.0f) cubeRotation -= 360.0f;
 
-    // Oświetlenie krąży wokół sceny
+    // Oświetlenie krąży wokół sceny (pierwsze światło)
     float lightX = sin(glfwGetTime()) * 5.0f;
     float lightZ = cos(glfwGetTime()) * 5.0f;
-    lightPos = glm::vec3(lightX, 5.0f, lightZ);
+    lights[0].position = glm::vec3(lightX, 5.0f, lightZ);
+
+    // Drugie światło (kierunkowe) porusza się w pionie
+    lights[1].position.y = 8.0f + sin(glfwGetTime() * 0.5f) * 2.0f;
 
     // Obsługa klawiatury dla kamery
     if (cameraEnabled) {
@@ -564,22 +718,40 @@ void render() {
     GLint viewLoc = glGetUniformLocation(shaderProgram, "view");
     GLint projLoc = glGetUniformLocation(shaderProgram, "projection");
     GLint objectColorLoc = glGetUniformLocation(shaderProgram, "objectColor");
-    GLint lightPosLoc = glGetUniformLocation(shaderProgram, "lightPos");
-    GLint lightColorLoc = glGetUniformLocation(shaderProgram, "lightColor");
     GLint viewPosLoc = glGetUniformLocation(shaderProgram, "viewPos");
     GLint useTextureLoc = glGetUniformLocation(shaderProgram, "useTexture");
     GLint texture1Loc = glGetUniformLocation(shaderProgram, "texture1");
+    GLint activeLightCountLoc = glGetUniformLocation(shaderProgram, "activeLightCount");
+    GLint currentLightModeLoc = glGetUniformLocation(shaderProgram, "currentLightMode");
 
     // Ustaw uniformy wspolne dla wszystkich obiektow
     glUniformMatrix4fv(viewLoc, 1, GL_FALSE, glm::value_ptr(view));
     glUniformMatrix4fv(projLoc, 1, GL_FALSE, glm::value_ptr(projection));
-    glUniform3fv(lightPosLoc, 1, glm::value_ptr(lightPos));
-    glUniform3fv(lightColorLoc, 1, glm::value_ptr(lightColor));
     glUniform3fv(viewPosLoc, 1, glm::value_ptr(viewPos));
+    glUniform1i(activeLightCountLoc, activeLightCount);
+    glUniform1i(currentLightModeLoc, currentLightMode);
 
     // Ustawienia tekstury dla teksturowanego sześcianu
     glUniform1i(useTextureLoc, useTextures ? 1 : 0);
     glUniform1i(texture1Loc, 0); // Jednostka teksturująca 0
+
+    // Ustaw uniformy dla świateł
+    for (int i = 0; i < activeLightCount; i++) {
+        std::string lightStr = "lights[" + std::to_string(i) + "].";
+
+        glUniform3fv(glGetUniformLocation(shaderProgram, (lightStr + "position").c_str()), 1, glm::value_ptr(lights[i].position));
+        glUniform3fv(glGetUniformLocation(shaderProgram, (lightStr + "direction").c_str()), 1, glm::value_ptr(lights[i].direction));
+        glUniform3fv(glGetUniformLocation(shaderProgram, (lightStr + "color").c_str()), 1, glm::value_ptr(lights[i].color));
+        glUniform1f(glGetUniformLocation(shaderProgram, (lightStr + "ambientIntensity").c_str()), lights[i].ambientIntensity);
+        glUniform1f(glGetUniformLocation(shaderProgram, (lightStr + "diffuseIntensity").c_str()), lights[i].diffuseIntensity);
+        glUniform1f(glGetUniformLocation(shaderProgram, (lightStr + "specularIntensity").c_str()), lights[i].specularIntensity);
+        glUniform1f(glGetUniformLocation(shaderProgram, (lightStr + "constant").c_str()), lights[i].constant);
+        glUniform1f(glGetUniformLocation(shaderProgram, (lightStr + "linear").c_str()), lights[i].linear);
+        glUniform1f(glGetUniformLocation(shaderProgram, (lightStr + "quadratic").c_str()), lights[i].quadratic);
+        glUniform1f(glGetUniformLocation(shaderProgram, (lightStr + "cutoff").c_str()), lights[i].cutoff);
+        glUniform1f(glGetUniformLocation(shaderProgram, (lightStr + "outerCutoff").c_str()), lights[i].outerCutoff);
+        glUniform1i(glGetUniformLocation(shaderProgram, (lightStr + "type").c_str()), lights[i].type);
+    }
 
     // Rysowanie teksturowanego sześcianu
     model = texturedCube.getModelMatrix();
@@ -685,12 +857,18 @@ void render() {
     glUniform3f(objectColorLoc, 0.0f, 0.0f, 1.0f);
     geometryRenderer->drawLine(glm::vec3(0.0f), glm::vec3(0.0f, 0.0f, 3.0f));
 
-    // 10. Rysowanie punktu (źródło światła)
+    // Rysowanie punktów (źródła światła)
     geometryRenderer->setDrawMode(GL_POINTS);
-    glUniform3f(objectColorLoc, 1.0f, 1.0f, 1.0f); // Biały
-    geometryRenderer->drawPoint(lightPos, 10.0f, glm::vec3(1.0f, 1.0f, 1.0f));
 
-    // 11. Rysowanie pozycji kamery (opcjonalnie, dla debugowania)
+    // Pierwsze światło (białe)
+    glUniform3f(objectColorLoc, 1.0f, 1.0f, 1.0f);
+    geometryRenderer->drawPoint(lights[0].position, 10.0f, glm::vec3(1.0f, 1.0f, 1.0f));
+
+    // Drugie światło (niebieskawe)
+    glUniform3f(objectColorLoc, 0.8f, 0.8f, 1.0f);
+    geometryRenderer->drawPoint(lights[1].position, 10.0f, glm::vec3(0.8f, 0.8f, 1.0f));
+
+    // Rysowanie pozycji kamery (opcjonalnie, dla debugowania)
     geometryRenderer->setDrawMode(GL_POINTS);
     glUniform3f(objectColorLoc, 0.0f, 1.0f, 1.0f); // Cyjan
     geometryRenderer->drawPoint(camera.getPosition(), 5.0f, glm::vec3(0.0f, 1.0f, 1.0f));
@@ -723,6 +901,9 @@ int main() {
 
     // Utworzenie menadżera sceny
     sceneManager = new SceneManager(geometryRenderer);
+
+    // Inicjalizacja świateł
+    initializeLights();
 
     // Tworzenie obiektów 3D z transformacjami
     rotatingCube = sceneManager->createCube("RotatingCube",
@@ -776,7 +957,7 @@ int main() {
 
     // Inicjalizacja teksturowanego sześcianu
     texturedCube.create(1.0f);
-    if (!texture.loadTexture("../Texture/Texture4.png")) {
+    if (!texture.loadTexture("../Texture/harnas.png")) {
         if (!texture.loadTexture("../Texture/Wood_Texture.png")) {
             std::cout << "Nie udalo sie zaladowac tekstury" << std::endl;
         }
@@ -847,6 +1028,10 @@ int main() {
     std::cout << "V: Wlacz/wylacz automatyczna zmiane tla" << std::endl;
     std::cout << "Lewy przycisk myszy: Zmien kolor kuli na czerwony" << std::endl;
     std::cout << "Prawy przycisk myszy: Przywroc kolor kuli" << std::endl;
+    std::cout << "\n=== OŚWIETLENIE ===" << std::endl;
+    std::cout << "L: Przelacz tryb oswietlenia (tylko pierwsze/tylko drugie/wszystkie)" << std::endl;
+    std::cout << "O: Zmien typ pierwszego swiatla (punktowe/kierunkowe/stozkowe)" << std::endl;
+    std::cout << "P: Zmien typ drugiego swiatla (punktowe/kierunkowe/stozkowe)" << std::endl;
     std::cout << "==================" << std::endl;
 
     std::cout << "\n=== INFORMACJE ===" << std::endl;
@@ -855,6 +1040,10 @@ int main() {
     std::cout << "Tryb kamery: FPS" << std::endl;
     std::cout << "Sterowanie kamera: WLACZONE" << std::endl;
     std::cout << "Liczba obiektow w scenie: " << sceneManager->getObjectCount() << std::endl;
+    std::cout << "Liczba zrodel swiatla: " << activeLightCount << std::endl;
+    std::cout << "Tryb oswietlenia: WSZYSTKIE SWIATLA" << std::endl;
+    std::cout << "Typ pierwszego swiatla: PUNKTOWE" << std::endl;
+    std::cout << "Typ drugiego swiatla: KIERUNKOWE" << std::endl;
     std::cout << "==================" << std::endl;
 
     // Lambda dla aktualizacji z referencją do silnika
