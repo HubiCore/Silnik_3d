@@ -212,6 +212,7 @@ glm::vec3 viewPos(0.0f, 3.0f, 8.0f);
 // Zmienne globalne dla nowego systemu transformacji
 SceneManager* sceneManager = nullptr;
 TransformableObject* rotatingCube = nullptr;
+TransformableObject* rotatecylinder = nullptr;
 TransformableObject* orbitingSphere = nullptr;
 ComplexObjectWithTransform* letterHObject = nullptr;
 TransformableObject* parentCube = nullptr;
@@ -357,15 +358,15 @@ void keyCallback(GLFWwindow* window, int key, int scancode, int action, int mods
     // Sterowanie transformacjami obiektów
     if (key == GLFW_KEY_UP && action == GLFW_PRESS) {
         if (rotatingCube) {
-            rotatingCube->translate(glm::vec3(0.0f, 0.5f, 0.0f));
-            std::cout << "Przesunieto szescian w gore" << std::endl;
+            rotatingCube->translate(glm::vec3(0.0f, 0.0f, -0.5f));
+            std::cout << "Przesunieto szescian do przodu" << std::endl;
         }
     }
 
     if (key == GLFW_KEY_DOWN && action == GLFW_PRESS) {
         if (rotatingCube) {
-            rotatingCube->translate(glm::vec3(0.0f, -0.5f, 0.0f));
-            std::cout << "Przesunieto szescian w dol" << std::endl;
+            rotatingCube->translate(glm::vec3(0.0f, 0.0f, 0.5f));
+            std::cout << "Przesunieto szescian do tylu" << std::endl;
         }
     }
 
@@ -385,15 +386,15 @@ void keyCallback(GLFWwindow* window, int key, int scancode, int action, int mods
 
     if (key == GLFW_KEY_PAGE_UP && action == GLFW_PRESS) {
         if (rotatingCube) {
-            rotatingCube->translate(glm::vec3(0.0f, 0.0f, -0.5f));
-            std::cout << "Przesunieto szescian do przodu" << std::endl;
+            rotatingCube->translate(glm::vec3(0.0f, 0.5f, 0.0f));
+            std::cout << "Przesunieto szescian w gore" << std::endl;
         }
     }
 
     if (key == GLFW_KEY_PAGE_DOWN && action == GLFW_PRESS) {
         if (rotatingCube) {
-            rotatingCube->translate(glm::vec3(0.0f, 0.0f, 0.5f));
-            std::cout << "Przesunieto szescian do tylu" << std::endl;
+            rotatingCube->translate(glm::vec3(0.0f, -0.5f, 0.0f));
+            std::cout << "Przesunieto szescian w dol" << std::endl;
         }
     }
 
@@ -412,10 +413,7 @@ void keyCallback(GLFWwindow* window, int key, int scancode, int action, int mods
     }
 
     if (key == GLFW_KEY_R && action == GLFW_PRESS && mods & GLFW_MOD_CONTROL) {
-        if (rotatingCube) {
-            rotatingCube->setRotation(glm::vec3(0.0f));
-            std::cout << "Zresetowano rotację szescianu" << std::endl;
-        }
+
     }
 
     if (key == GLFW_KEY_H && action == GLFW_PRESS) {
@@ -665,9 +663,9 @@ void update(Engine& engine) {
             camera.setMovementSpeed(2.5f);
     }
 
-    // Animacja obracającego się sześcianu
-    if (rotatingCube) {
-        rotatingCube->setRotation(glm::vec3(cubeRotation, cubeRotation * 0.7f, 0.0f));
+    // Animacja obracającego się krążka
+    if (rotatecylinder) {
+        rotatecylinder->setRotation(glm::vec3(cubeRotation, cubeRotation * 0.7f, 0.0f));
     }
 
     // Animacja orbitującej kuli
@@ -944,7 +942,7 @@ int main() {
     childSphere2->setParent(childSphere1);
 
     // Dodanie więcej obiektów do demonstracji
-    sceneManager->createCylinder("Cylinder1",
+    rotatecylinder = sceneManager->createCylinder("Cylinder1",
                                  glm::vec3(4.0f, 0.0f, -3.0f),
                                  2.0f, 0.5f,
                                  glm::vec3(0.2f, 0.5f, 1.0f));
@@ -1017,18 +1015,17 @@ int main() {
     std::cout << "Mysz: Patrzenie" << std::endl;
     std::cout << "Scroll: Zoom" << std::endl;
     std::cout << "\n=== TRANSFORMACJE OBIEKTOW ===" << std::endl;
-    std::cout << "Strzalki: Przesuwanie szescianu (gora/dol/lewo/prawo)" << std::endl;
-    std::cout << "PageUp/PageDown: Przesuwanie szescianu (przod/tyl)" << std::endl;
-    std::cout << "+ (numeryczne): Powiększ szescian" << std::endl;
+    std::cout << "Strzalki: Przesuwanie szescianu (przod/tyl/lewo/prawo)" << std::endl;
+    std::cout << "PageUp/PageDown: Przesuwanie szescianu (gora/dol)" << std::endl;
+    std::cout << "+ (numeryczne): Powieksz szescian" << std::endl;
     std::cout << "- (numeryczne): Pomniejsz szescian" << std::endl;
-    std::cout << "Ctrl+R: Resetuj rotację szescianu" << std::endl;
     std::cout << "H: Przelacz widocznosc litery H" << std::endl;
     std::cout << "M: Zmien tryb renderowania" << std::endl;
     std::cout << "B: Zmien kolor tla (5 opcji)" << std::endl;
     std::cout << "V: Wlacz/wylacz automatyczna zmiane tla" << std::endl;
     std::cout << "Lewy przycisk myszy: Zmien kolor kuli na czerwony" << std::endl;
     std::cout << "Prawy przycisk myszy: Przywroc kolor kuli" << std::endl;
-    std::cout << "\n=== OŚWIETLENIE ===" << std::endl;
+    std::cout << "\n=== OSWIETLENIE ===" << std::endl;
     std::cout << "L: Przelacz tryb oswietlenia (tylko pierwsze/tylko drugie/wszystkie)" << std::endl;
     std::cout << "O: Zmien typ pierwszego swiatla (punktowe/kierunkowe/stozkowe)" << std::endl;
     std::cout << "P: Zmien typ drugiego swiatla (punktowe/kierunkowe/stozkowe)" << std::endl;
