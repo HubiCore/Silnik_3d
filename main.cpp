@@ -955,7 +955,7 @@ int main() {
 
     // Inicjalizacja teksturowanego sześcianu
     texturedCube.create(1.0f);
-    if (!texture.loadTexture("../Texture/harnas.png")) {
+    if (!texture.loadTexture("../Texture/down.png")) {
         if (!texture.loadTexture("../Texture/Wood_Texture.png")) {
             std::cout << "Nie udalo sie zaladowac tekstury" << std::endl;
         }
