@@ -384,28 +384,28 @@ void keyCallback(GLFWwindow* window, int key, int scancode, int action, int mods
         }
     }
 
-    if (key == GLFW_KEY_PAGE_UP && action == GLFW_PRESS) {
+    if (key == GLFW_KEY_PAGE_UP && action == GLFW_PRESS || key == GLFW_KEY_KP_9 && action == GLFW_PRESS) {
         if (rotatingCube) {
             rotatingCube->translate(glm::vec3(0.0f, 0.5f, 0.0f));
             std::cout << "Przesunieto szescian w gore" << std::endl;
         }
     }
 
-    if (key == GLFW_KEY_PAGE_DOWN && action == GLFW_PRESS) {
+    if (key == GLFW_KEY_PAGE_DOWN && action == GLFW_PRESS  || key == GLFW_KEY_KP_3 && action == GLFW_PRESS) {
         if (rotatingCube) {
             rotatingCube->translate(glm::vec3(0.0f, -0.5f, 0.0f));
             std::cout << "Przesunieto szescian w dol" << std::endl;
         }
     }
 
-    if (key == GLFW_KEY_EQUAL && action == GLFW_PRESS || key == GLFW_KEY_KP_9 && action == GLFW_PRESS) {
+    if (key == GLFW_KEY_EQUAL && action == GLFW_PRESS) {
         if (rotatingCube) {
             rotatingCube->scale(glm::vec3(1.1f));
             std::cout << "Powiekszono szescian" << std::endl;
         }
     }
 
-    if (key == GLFW_KEY_MINUS && action == GLFW_PRESS || key == GLFW_KEY_KP_3 && action == GLFW_PRESS) {
+    if (key == GLFW_KEY_MINUS && action == GLFW_PRESS) {
         if (rotatingCube) {
             rotatingCube->scale(glm::vec3(0.9f));
             std::cout << "Pomniejszono szescian" << std::endl;
