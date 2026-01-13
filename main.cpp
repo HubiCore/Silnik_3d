@@ -593,7 +593,7 @@ void initializeLights() {
     // Drugie światło - kierunkowe
     lights[1].position = glm::vec3(0.0f, 10.0f, 0.0f);
     lights[1].direction = glm::vec3(0.0f, -1.0f, 0.0f);
-    lights[1].color = glm::vec3(0.8f, 0.8f, 1.0f); // niebieskawa barwa
+    lights[1].color = glm::vec3(1.0f, 0.0f, 0.0f); // niebieskawa barwa (teraz czerwona)
     lights[1].ambientIntensity = 0.2f;
     lights[1].diffuseIntensity = 0.6f;
     lights[1].specularIntensity = 0.3f;
