@@ -398,14 +398,14 @@ void keyCallback(GLFWwindow* window, int key, int scancode, int action, int mods
         }
     }
 
-    if (key == GLFW_KEY_KP_ADD && action == GLFW_PRESS) {
+    if (key == GLFW_KEY_EQUAL && action == GLFW_PRESS) {
         if (rotatingCube) {
             rotatingCube->scale(glm::vec3(1.1f));
-            std::cout << "Powiększono szescian" << std::endl;
+            std::cout << "Powiekszono szescian" << std::endl;
         }
     }
 
-    if (key == GLFW_KEY_KP_SUBTRACT && action == GLFW_PRESS) {
+    if (key == GLFW_KEY_MINUS && action == GLFW_PRESS) {
         if (rotatingCube) {
             rotatingCube->scale(glm::vec3(0.9f));
             std::cout << "Pomniejszono szescian" << std::endl;
