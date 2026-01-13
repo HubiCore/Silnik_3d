@@ -19,8 +19,141 @@
 #include <glm/gtc/type_ptr.hpp>
 #include <cmath>
 
+
 // Simple shader program with multiple lights
-const char* vertexShaderSource = R"(
+const char* vertexShaderSourceFlat = R"(
+#version 330 core
+layout (location = 0) in vec3 aPos;
+layout (location = 1) in vec3 aNormal;
+layout (location = 2) in vec2 aTexCoord;
+
+uniform mat4 model;
+uniform mat4 view;
+uniform mat4 projection;
+
+flat out vec3 Normal;
+out vec3 FragPos;
+out vec2 TexCoord;
+
+void main()
+{
+    gl_Position = projection * view * model * vec4(aPos, 1.0);
+    FragPos = vec3(model * vec4(aPos, 1.0));
+    Normal = mat3(transpose(inverse(model))) * aNormal;
+    TexCoord = aTexCoord;
+}
+)";
+
+const char* fragmentShaderSourceFlat = R"(
+#version 330 core
+out vec4 FragColor;
+
+flat in vec3 Normal;
+in vec3 FragPos;
+in vec2 TexCoord;
+
+uniform sampler2D texture1;
+uniform vec3 objectColor;
+uniform vec3 viewPos;
+uniform bool useTexture;
+
+// Struktura dla światła
+struct Light {
+    vec3 position;
+    vec3 direction;
+    vec3 color;
+    float ambientIntensity;
+    float diffuseIntensity;
+    float specularIntensity;
+    float constant;
+    float linear;
+    float quadratic;
+    float cutoff; // dla światła stożkowego
+    float outerCutoff; // dla światła stożkowego
+    int type; // 0 = punktowe, 1 = kierunkowe, 2 = stożkowe
+};
+
+#define MAX_LIGHTS 8
+uniform Light lights[MAX_LIGHTS];
+uniform int activeLightCount;
+uniform int currentLightMode; // 0 = tylko pierwsze światło, 1 = tylko drugie światło, 2 = wszystkie
+
+// Funkcja obliczająca oświetlenie Phonga dla danego światła
+vec3 calculatePhongLight(Light light, vec3 normal, vec3 fragPos, vec3 viewDir, vec3 objectColor) {
+    vec3 lightDir;
+    float attenuation = 1.0;
+
+    // Obliczenie kierunku światła i tłumienia w zależności od typu
+    if (light.type == 1) { // światło kierunkowe
+        lightDir = normalize(-light.direction);
+        attenuation = 1.0; // brak tłumienia dla światła kierunkowego
+    } else { // światło punktowe lub stożkowe
+        lightDir = normalize(light.position - fragPos);
+        float distance = length(light.position - fragPos);
+        attenuation = 1.0 / (light.constant + light.linear * distance +
+                           light.quadratic * (distance * distance));
+
+        // Sprawdzenie dla światła stożkowego
+        if (light.type == 2) {
+            float theta = dot(lightDir, normalize(-light.direction));
+            float epsilon = light.cutoff - light.outerCutoff;
+            float intensity = clamp((theta - light.outerCutoff) / epsilon, 0.0, 1.0);
+            attenuation *= intensity;
+        }
+    }
+
+    // Ambient
+    vec3 ambient = light.ambientIntensity * light.color;
+
+    // Diffuse
+    float diff = max(dot(normal, lightDir), 0.0);
+    vec3 diffuse = light.diffuseIntensity * diff * light.color;
+
+    // Specular
+    vec3 reflectDir = reflect(-lightDir, normal);
+    float spec = pow(max(dot(viewDir, reflectDir), 0.0), 32.0);
+    vec3 specular = light.specularIntensity * spec * light.color;
+
+    // Połącz wszystkie składowe
+    return (ambient + diffuse + specular) * attenuation;
+}
+
+void main()
+{
+    vec3 color;
+    if (useTexture) {
+        color = texture(texture1, TexCoord).rgb;
+    } else {
+        color = objectColor;
+    }
+
+    vec3 normal = normalize(Normal);
+    vec3 viewDir = normalize(viewPos - FragPos);
+    vec3 result = vec3(0.0);
+
+    // Oblicz oświetlenie dla aktywnych świateł
+    if (currentLightMode == 0) {
+        // Tylko pierwsze światło
+        result += calculatePhongLight(lights[0], normal, FragPos, viewDir, color);
+    } else if (currentLightMode == 1) {
+        // Tylko drugie światło
+        result += calculatePhongLight(lights[1], normal, FragPos, viewDir, color);
+    } else if (currentLightMode == 2) {
+        // Wszystkie światła
+        for (int i = 0; i < min(activeLightCount, 2); i++) {
+            result += calculatePhongLight(lights[i], normal, FragPos, viewDir, color);
+        }
+    }
+
+    // Mieszanie z kolorem obiektu
+    result *= color;
+
+    FragColor = vec4(result, 1.0);
+}
+)";
+
+// Simple shader program with multiple lights
+const char* vertexShaderSourcePhong = R"(
 #version 330 core
 layout (location = 0) in vec3 aPos;
 layout (location = 1) in vec3 aNormal;
@@ -43,7 +176,7 @@ void main()
 }
 )";
 
-const char* fragmentShaderSource = R"(
+const char* fragmentShaderSourcePhong = R"(
 #version 330 core
 out vec4 FragColor;
 
@@ -156,7 +289,7 @@ static Engine* globalEngine = nullptr;
 bool autoBackgroundChange = false;
 glm::vec4 currentBackgroundColor(0.1f, 0.1f, 0.1f, 1.0f);
 
-GLuint shaderProgram;
+
 
 //Texture
 TexturedCube texturedCube;
@@ -167,6 +300,12 @@ BitmapHandler textureSphere; //tekstura dla kuli
 BitmapHandler textureCylinder; //tekstura dla cylindra
 BitmapHandler texture; //teksura dla sześcianu
 bool useTextures = true;
+
+//cieniowanie
+GLuint shaderProgramFlat;    //FLAT
+GLuint shaderProgramPhong;   //PHONG
+GLuint currentShaderProgram; //Aktualnie używany
+bool flatShading = false;    //(false = PHONG, true = FLAT)
 
 // Camera
 Camera camera(glm::vec3(0.0f, 2.0f, 8.0f));
@@ -324,7 +463,16 @@ void keyCallback(GLFWwindow* window, int key, int scancode, int action, int mods
         glfwGetFramebufferSize(window, &width, &height);
         glViewport(0, 0, width, height);
     }
-
+    if (key == GLFW_KEY_G && action == GLFW_PRESS) {
+        flatShading = !flatShading;
+        currentShaderProgram = flatShading ? shaderProgramFlat : shaderProgramPhong;
+        if (flatShading == true) {
+            std::cout<<"Tryb cienowania flat\n";
+        }
+        else {
+            std::cout<<"Tryb cienowania phong\n";
+        }
+    }
     if (key == GLFW_KEY_T && action == GLFW_PRESS) {
         cameraType = static_cast<Camera::CameraType>((cameraType + 1) % 3);
         camera.setType(cameraType);
@@ -553,25 +701,33 @@ GLuint compileShader(GLenum type, const char* source) {
 
 // Utworz program shaderowy
 void createShaderProgram() {
-    GLuint vertexShader = compileShader(GL_VERTEX_SHADER, vertexShaderSource);
-    GLuint fragmentShader = compileShader(GL_FRAGMENT_SHADER, fragmentShaderSource);
+    // Kompilacja shaderów dla trybu FLAT
+    GLuint vertexShaderFlat = compileShader(GL_VERTEX_SHADER, vertexShaderSourceFlat);
+    GLuint fragmentShaderFlat = compileShader(GL_FRAGMENT_SHADER, fragmentShaderSourceFlat);
 
-    shaderProgram = glCreateProgram();
-    glAttachShader(shaderProgram, vertexShader);
-    glAttachShader(shaderProgram, fragmentShader);
-    glLinkProgram(shaderProgram);
+    shaderProgramFlat = glCreateProgram();
+    glAttachShader(shaderProgramFlat, vertexShaderFlat);
+    glAttachShader(shaderProgramFlat, fragmentShaderFlat);
+    glLinkProgram(shaderProgramFlat);
 
-    // Sprawdz bledy linkowania
-    GLint success;
-    GLchar infoLog[512];
-    glGetProgramiv(shaderProgram, GL_LINK_STATUS, &success);
-    if (!success) {
-        glGetProgramInfoLog(shaderProgram, 512, NULL, infoLog);
-        std::cerr << "Blad linkowania programu:\n" << infoLog << std::endl;
-    }
+    // Kompilacja shaderów dla trybu PHONG
+    GLuint vertexShaderPhong = compileShader(GL_VERTEX_SHADER, vertexShaderSourcePhong);
+    GLuint fragmentShaderPhong = compileShader(GL_FRAGMENT_SHADER, fragmentShaderSourcePhong);
 
-    glDeleteShader(vertexShader);
-    glDeleteShader(fragmentShader);
+    shaderProgramPhong = glCreateProgram();
+    glAttachShader(shaderProgramPhong, vertexShaderPhong);
+    glAttachShader(shaderProgramPhong, fragmentShaderPhong);
+    glLinkProgram(shaderProgramPhong);
+
+    // Ustaw domyślny program na PHONG
+    currentShaderProgram = shaderProgramPhong;
+    flatShading = false;
+
+    // Usuń shadery (już niepotrzebne po linkowaniu)
+    glDeleteShader(vertexShaderFlat);
+    glDeleteShader(fragmentShaderFlat);
+    glDeleteShader(vertexShaderPhong);
+    glDeleteShader(fragmentShaderPhong);
 }
 
 // Inicjalizacja świateł
@@ -709,18 +865,18 @@ void render() {
     geometryRenderer->setViewMatrix(view);
 
     // Uzywaj shadera
-    glUseProgram(shaderProgram);
+    glUseProgram(currentShaderProgram);
 
-    // Pobierz lokalizacje uniformow
-    GLint modelLoc = glGetUniformLocation(shaderProgram, "model");
-    GLint viewLoc = glGetUniformLocation(shaderProgram, "view");
-    GLint projLoc = glGetUniformLocation(shaderProgram, "projection");
-    GLint objectColorLoc = glGetUniformLocation(shaderProgram, "objectColor");
-    GLint viewPosLoc = glGetUniformLocation(shaderProgram, "viewPos");
-    GLint useTextureLoc = glGetUniformLocation(shaderProgram, "useTexture");
-    GLint texture1Loc = glGetUniformLocation(shaderProgram, "texture1");
-    GLint activeLightCountLoc = glGetUniformLocation(shaderProgram, "activeLightCount");
-    GLint currentLightModeLoc = glGetUniformLocation(shaderProgram, "currentLightMode");
+    // Pobierz lokalizacje uniformow z AKTUALNEGO programu shaderowego
+    GLint modelLoc = glGetUniformLocation(currentShaderProgram, "model");
+    GLint viewLoc = glGetUniformLocation(currentShaderProgram, "view");
+    GLint projLoc = glGetUniformLocation(currentShaderProgram, "projection");
+    GLint objectColorLoc = glGetUniformLocation(currentShaderProgram, "objectColor");
+    GLint viewPosLoc = glGetUniformLocation(currentShaderProgram, "viewPos");
+    GLint useTextureLoc = glGetUniformLocation(currentShaderProgram, "useTexture");
+    GLint texture1Loc = glGetUniformLocation(currentShaderProgram, "texture1");
+    GLint activeLightCountLoc = glGetUniformLocation(currentShaderProgram, "activeLightCount");
+    GLint currentLightModeLoc = glGetUniformLocation(currentShaderProgram, "currentLightMode");
 
     // Ustaw uniformy wspolne dla wszystkich obiektow
     glUniformMatrix4fv(viewLoc, 1, GL_FALSE, glm::value_ptr(view));
@@ -733,22 +889,22 @@ void render() {
     glUniform1i(useTextureLoc, useTextures ? 1 : 0);
     glUniform1i(texture1Loc, 0); // Jednostka teksturująca 0
 
-    // Ustaw uniformy dla świateł
+    // Ustaw uniformy dla świateł - UWAGA: też z currentShaderProgram!
     for (int i = 0; i < activeLightCount; i++) {
         std::string lightStr = "lights[" + std::to_string(i) + "].";
 
-        glUniform3fv(glGetUniformLocation(shaderProgram, (lightStr + "position").c_str()), 1, glm::value_ptr(lights[i].position));
-        glUniform3fv(glGetUniformLocation(shaderProgram, (lightStr + "direction").c_str()), 1, glm::value_ptr(lights[i].direction));
-        glUniform3fv(glGetUniformLocation(shaderProgram, (lightStr + "color").c_str()), 1, glm::value_ptr(lights[i].color));
-        glUniform1f(glGetUniformLocation(shaderProgram, (lightStr + "ambientIntensity").c_str()), lights[i].ambientIntensity);
-        glUniform1f(glGetUniformLocation(shaderProgram, (lightStr + "diffuseIntensity").c_str()), lights[i].diffuseIntensity);
-        glUniform1f(glGetUniformLocation(shaderProgram, (lightStr + "specularIntensity").c_str()), lights[i].specularIntensity);
-        glUniform1f(glGetUniformLocation(shaderProgram, (lightStr + "constant").c_str()), lights[i].constant);
-        glUniform1f(glGetUniformLocation(shaderProgram, (lightStr + "linear").c_str()), lights[i].linear);
-        glUniform1f(glGetUniformLocation(shaderProgram, (lightStr + "quadratic").c_str()), lights[i].quadratic);
-        glUniform1f(glGetUniformLocation(shaderProgram, (lightStr + "cutoff").c_str()), lights[i].cutoff);
-        glUniform1f(glGetUniformLocation(shaderProgram, (lightStr + "outerCutoff").c_str()), lights[i].outerCutoff);
-        glUniform1i(glGetUniformLocation(shaderProgram, (lightStr + "type").c_str()), lights[i].type);
+        glUniform3fv(glGetUniformLocation(currentShaderProgram, (lightStr + "position").c_str()), 1, glm::value_ptr(lights[i].position));
+        glUniform3fv(glGetUniformLocation(currentShaderProgram, (lightStr + "direction").c_str()), 1, glm::value_ptr(lights[i].direction));
+        glUniform3fv(glGetUniformLocation(currentShaderProgram, (lightStr + "color").c_str()), 1, glm::value_ptr(lights[i].color));
+        glUniform1f(glGetUniformLocation(currentShaderProgram, (lightStr + "ambientIntensity").c_str()), lights[i].ambientIntensity);
+        glUniform1f(glGetUniformLocation(currentShaderProgram, (lightStr + "diffuseIntensity").c_str()), lights[i].diffuseIntensity);
+        glUniform1f(glGetUniformLocation(currentShaderProgram, (lightStr + "specularIntensity").c_str()), lights[i].specularIntensity);
+        glUniform1f(glGetUniformLocation(currentShaderProgram, (lightStr + "constant").c_str()), lights[i].constant);
+        glUniform1f(glGetUniformLocation(currentShaderProgram, (lightStr + "linear").c_str()), lights[i].linear);
+        glUniform1f(glGetUniformLocation(currentShaderProgram, (lightStr + "quadratic").c_str()), lights[i].quadratic);
+        glUniform1f(glGetUniformLocation(currentShaderProgram, (lightStr + "cutoff").c_str()), lights[i].cutoff);
+        glUniform1f(glGetUniformLocation(currentShaderProgram, (lightStr + "outerCutoff").c_str()), lights[i].outerCutoff);
+        glUniform1i(glGetUniformLocation(currentShaderProgram, (lightStr + "type").c_str()), lights[i].type);
     }
 
     // Rysowanie teksturowanego sześcianu
@@ -1026,6 +1182,7 @@ int main() {
     std::cout << "Lewy przycisk myszy: Zmien kolor kuli na czerwony" << std::endl;
     std::cout << "Prawy przycisk myszy: Przywroc kolor kuli" << std::endl;
     std::cout << "\n=== OSWIETLENIE ===" << std::endl;
+    std::cout << "G: Zmien tryb cieniowania (PHONG/FLAT)"<<std::endl;
     std::cout << "L: Przelacz tryb oswietlenia (tylko pierwsze/tylko drugie/wszystkie)" << std::endl;
     std::cout << "O: Zmien typ pierwszego swiatla (punktowe/kierunkowe/stozkowe)" << std::endl;
     std::cout << "P: Zmien typ drugiego swiatla (punktowe/kierunkowe/stozkowe)" << std::endl;
