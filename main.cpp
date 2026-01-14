@@ -308,7 +308,7 @@ GLuint currentShaderProgram; //Aktualnie używany
 bool flatShading = false;    //(false = PHONG, true = FLAT)
 
 // Camera
-Camera camera(glm::vec3(0.0f, 2.0f, 8.0f));
+Camera camera(glm::vec3(0.0f, 2.0f, 13.0f));
 bool firstMouse = true;
 float lastX = 400, lastY = 300;
 
@@ -354,10 +354,10 @@ TransformableObject* rotatingCube = nullptr;
 TransformableObject* rotatecylinder = nullptr;
 TransformableObject* orbitingSphere = nullptr;
 ComplexObjectWithTransform* letterHObject = nullptr;
-TransformableObject* parentCube = nullptr;
-TransformableObject* childSphere1 = nullptr;
-TransformableObject* childSphere2 = nullptr;
-
+TransformableObject* wagonik1 = nullptr;
+TransformableObject* wagonik2 = nullptr;
+TransformableObject* wagonik3 = nullptr;
+TransformableObject* wagonik4 = nullptr;
 
 // Callback klawiatury
 void keyCallback(GLFWwindow* window, int key, int scancode, int action, int mods) {
@@ -491,7 +491,7 @@ void keyCallback(GLFWwindow* window, int key, int scancode, int action, int mods
     }
 
     if (key == GLFW_KEY_R && action == GLFW_PRESS) {
-        camera.setPosition(glm::vec3(0.0f, 2.0f, 8.0f));
+        camera.setPosition(glm::vec3(0.0f, 2.0f, 13.0f));
         camera.setYaw(-90.0f);
         camera.setPitch(0.0f);
         std::cout << "Kamera zresetowana" << std::endl;
@@ -735,7 +735,7 @@ void initializeLights() {
     // Pierwsze światło - punktowe (jak w oryginalnym kodzie)
     lights[0].position = glm::vec3(5.0f, 5.0f, 5.0f);
     lights[0].direction = glm::vec3(0.0f, -1.0f, 0.0f);
-    lights[0].color = glm::vec3(1.0f, 1.0f, 1.0f);
+    lights[0].color = glm::vec3(0.0f, 1.0f, 0.0f);
     lights[0].ambientIntensity = 0.1f;
     lights[0].diffuseIntensity = 0.8f;
     lights[0].specularIntensity = 0.5f;
@@ -842,10 +842,10 @@ void update(Engine& engine) {
     }
 
     // Animacja obiektu z hierarchią
-    if (parentCube) {
+    if (wagonik1) {
         float time = glfwGetTime();
-        parentCube->setRotation(glm::vec3(0.0f, rotationAngle * 0.3f, 0.0f));
-        parentCube->translate(glm::vec3(sin(time * 0.5f) * 0.1f, 0.0f, 0.0f));
+        wagonik1->setRotation(glm::vec3(rotationAngle * 1.5f, 0.0f, 0.0f));
+        wagonik1->translate(glm::vec3(sin(time * 0.8f) * 0.2f, 0.0f, 0.0f));
     }
 }
 
@@ -1077,25 +1077,34 @@ int main() {
                                                 glm::vec3(0.9f, 0.2f, 0.2f));
 
     // Tworzenie hierarchii obiektów
-    parentCube = sceneManager->createCube("ParentCube",
-                                          glm::vec3(-5.0f, 2.0f, 0.0f),
+    wagonik1 = sceneManager->createCube("wagonik1",
+                                          glm::vec3(0.0f, 2.0f, 0.0f),
                                           glm::vec3(0.0f),
-                                          glm::vec3(1.5f),
+                                          glm::vec3(1.0f),
                                           glm::vec3(0.8f, 0.2f, 0.8f));
 
-    childSphere1 = sceneManager->createSphere("ChildSphere1",
-                                             glm::vec3(1.5f, 0.0f, 0.0f),
-                                             0.5f,
-                                             glm::vec3(0.8f, 0.8f, 0.2f));
+    wagonik2 = sceneManager->createCube("wagonik2",
+                                          glm::vec3(1.2f, 0.0f, 0.0f),
+                                          glm::vec3(0.0f),
+                                          glm::vec3(1.0f),
+                                          glm::vec3(0.8f, 0.2f, 0.8f));
 
-    childSphere2 = sceneManager->createSphere("ChildSphere2",
-                                             glm::vec3(-3.0f, 0.0f, 0.0f),
-                                             0.5f,
-                                             glm::vec3(0.8f, 0.8f, 0.2f));
+    wagonik3 = sceneManager->createCube("wagonik3",
+                                          glm::vec3(2.4f, 0.0f, 0.0f),
+                                          glm::vec3(0.0f),
+                                          glm::vec3(1.0f),
+                                          glm::vec3(0.8f, 0.2f, 0.8f));
+
+    wagonik4 = sceneManager->createCube("wagonik4",
+                                          glm::vec3(3.6f, 0.0f, 0.0f),
+                                          glm::vec3(0.0f),
+                                          glm::vec3(1.0f),
+                                          glm::vec3(0.8f, 0.2f, 0.8f));
 
     // Ustawienie hierarchii (dziecko będzie poruszać się razem z rodzicem)
-    childSphere1->setParent(parentCube);
-    childSphere2->setParent(childSphere1);
+    wagonik2->setParent(wagonik1);
+    wagonik3->setParent(wagonik1);
+    wagonik4->setParent(wagonik1);
 
     // Dodanie więcej obiektów do demonstracji
     rotatecylinder = sceneManager->createCylinder("Cylinder1",
@@ -1111,7 +1120,7 @@ int main() {
 
     // Inicjalizacja teksturowanego sześcianu
     texturedCube.create(1.0f);
-    if (!texture.loadTexture("../Texture/down.png")) {
+    if (!texture.loadTexture("../Texture/Texture4.png")) {
         if (!texture.loadTexture("../Texture/Wood_Texture.png")) {
             std::cout << "Nie udalo sie zaladowac tekstury" << std::endl;
         }
@@ -1127,14 +1136,14 @@ int main() {
     texturedSphere.setTexture(std::make_shared<BitmapHandler>(std::move(textureSphere)));
     texturedSphere.setPosition(glm::vec3(0.0f, 1.5f, -5.0f));
 
-    texturedCylinder.create(1.0f, 3.0f); // Cylinder: radius=1.0, height=3.0
-    texturedCylinder.rotate(glm::vec3(0.0f, 120.0f, 0.0f));
+    texturedCylinder.create(0.5f, 2.0f); // Cylinder: radius=1.0, height=3.0
+    texturedCylinder.rotate(glm::vec3(0.0f, 140.0f, 0.0f));
     if (!textureCylinder.loadTexture("../Texture/harnas.png")) {
         if (!textureCylinder.loadTexture("../Texture/Wood_Texture.png")) {
             std::cout << "Nie udalo sie zaladowac tekstury" << std::endl;
         }    }
     texturedCylinder.setTexture(std::make_shared<BitmapHandler>(std::move(textureCylinder)));
-    texturedCylinder.setPosition(glm::vec3(-3.0f, 1.5f, 4.0f));
+    texturedCylinder.setPosition(glm::vec3(-3.0f, 1.5f, 6.0f));
 
     // Utworz shadery
     createShaderProgram();
