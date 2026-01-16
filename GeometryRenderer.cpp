@@ -6,10 +6,13 @@
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
 
-
-
 #define PI 3.14159265358979323846f
 
+/**
+ * @brief Konstruktor GeometryRenderer
+ *
+ * Inicjalizuje tryb rysowania i domyślne właściwości materiału
+ */
 GeometryRenderer::GeometryRenderer() : m_drawMode(GL_TRIANGLES) {
     m_currentMaterial.ambient = glm::vec3(0.2f, 0.2f, 0.2f);
     m_currentMaterial.diffuse = glm::vec3(0.8f, 0.8f, 0.8f);
@@ -17,6 +20,11 @@ GeometryRenderer::GeometryRenderer() : m_drawMode(GL_TRIANGLES) {
     m_currentMaterial.shininess = 32.0f;
 }
 
+/**
+ * @brief Destruktor GeometryRenderer
+ *
+ * Zwalnia wszystkie zasoby OpenGL (VAO, VBO, EBO)
+ */
 GeometryRenderer::~GeometryRenderer() {
     deleteMesh(m_cubeMesh);
     deleteMesh(m_sphereMesh);
@@ -33,6 +41,13 @@ GeometryRenderer::~GeometryRenderer() {
     glDeleteBuffers(1, &m_pointVBO);
 }
 
+/**
+ * @brief Inicjalizuje renderer geometryczny
+ * @return true jeśli inicjalizacja się powiodła, false w przeciwnym razie
+ *
+ * @details Inicjalizuje GLEW, tworzy wszystkie podstawowe kształty geometryczne
+ * i inicjalizuje bufory dla linii i punktów.
+ */
 bool GeometryRenderer::initialize() {
     // Inicjalizacja GLEW (jeśli potrzebne)
     glewExperimental = GL_TRUE;
@@ -63,6 +78,15 @@ bool GeometryRenderer::initialize() {
     return true;
 }
 
+/**
+ * @brief Konfiguruje siatkę 3D z podanych wierzchołków i indeksów
+ * @param mesh Referencja do struktury Mesh
+ * @param vertices Wektor wierzchołków
+ * @param indices Wektor indeksów
+ *
+ * @details Tworzy VAO, VBO i EBO w OpenGL, przesyła dane do GPU
+ * i konfiguruje atrybuty wierzchołków (pozycja, normalna, UV).
+ */
 void GeometryRenderer::setupMesh(Mesh& mesh, const std::vector<Vertex>& vertices, const std::vector<unsigned int>& indices) {
     glGenVertexArrays(1, &mesh.VAO);
     glGenBuffers(1, &mesh.VBO);
@@ -95,12 +119,22 @@ void GeometryRenderer::setupMesh(Mesh& mesh, const std::vector<Vertex>& vertices
     mesh.indexCount = static_cast<int>(indices.size());
 }
 
+/**
+ * @brief Usuwa zasoby siatki 3D
+ * @param mesh Referencja do struktury Mesh
+ */
 void GeometryRenderer::deleteMesh(Mesh& mesh) {
     glDeleteVertexArrays(1, &mesh.VAO);
     glDeleteBuffers(1, &mesh.VBO);
     glDeleteBuffers(1, &mesh.EBO);
 }
 
+/**
+ * @brief Tworzy siatkę sześcianu jednostkowego
+ *
+ * @details Tworzy sześcian o rozmiarze 1x1x1 ze środkiem w (0,0,0).
+ * Każda ściana ma normalną skierowaną na zewnątrz i współrzędne UV.
+ */
 void GeometryRenderer::createCube() {
     std::vector<Vertex> vertices = {
         // Front
@@ -152,6 +186,14 @@ void GeometryRenderer::createCube() {
     setupMesh(m_cubeMesh, vertices, indices);
 }
 
+/**
+ * @brief Tworzy siatkę sfery jednostkowej
+ * @param sectors Liczba sektorów (dokładność wokół osi Z)
+ * @param stacks Liczba warstw (dokładność wzdłuż osi Y)
+ *
+ * @details Tworzy sferę o promieniu 1 metodą parametryczną (phi i theta).
+ * Wykorzystuje parametryczne równania sfery.
+ */
 void GeometryRenderer::createSphere(int sectors, int stacks) {
     std::vector<Vertex> vertices;
     std::vector<unsigned int> indices;
@@ -201,6 +243,14 @@ void GeometryRenderer::createSphere(int sectors, int stacks) {
     setupMesh(m_sphereMesh, vertices, indices);
 }
 
+/**
+ * @brief Tworzy siatkę cylindra jednostkowego
+ * @param sectors Liczba sektorów (dokładność okręgu)
+ *
+ * @details Tworzy cylinder o wysokości 1 i promieniu 1.
+ * Składa się z dwóch podstaw (górnej i dolnej) i ściany bocznej.
+ * Wykorzystuje poprawny winding order (CCW) dla wszystkich trójkątów.
+ */
 void GeometryRenderer::createCylinder(int sectors) {
     std::vector<Vertex> vertices;
     std::vector<unsigned int> indices;
@@ -262,7 +312,13 @@ void GeometryRenderer::createCylinder(int sectors) {
     setupMesh(m_cylinderMesh, vertices, indices);
 }
 
-
+/**
+ * @brief Tworzy siatkę stożka jednostkowego
+ * @param sectors Liczba sektorów (dokładność okręgu)
+ *
+ * @details Tworzy stożek o wysokości 1 i promieniu podstawy 1.
+ * Składa się z podstawy i ściany bocznej zbiegającej się w wierzchołku.
+ */
 void GeometryRenderer::createCone(int sectors) {
     std::vector<Vertex> vertices;
     std::vector<unsigned int> indices;
@@ -305,6 +361,12 @@ void GeometryRenderer::createCone(int sectors) {
     setupMesh(m_coneMesh, vertices, indices);
 }
 
+/**
+ * @brief Tworzy siatkę płaszczyzny jednostkowej
+ *
+ * @details Tworzy kwadratową płaszczyznę o rozmiarze 1x1 w płaszczyźnie XZ.
+ * Normalna skierowana jest w górę (wzdłuż osi Y).
+ */
 void GeometryRenderer::createPlane() {
     std::vector<Vertex> vertices = {
         {{-0.5f, 0.0f, -0.5f}, {0.0f, 1.0f, 0.0f}, {0.0f, 0.0f}},
@@ -320,6 +382,16 @@ void GeometryRenderer::createPlane() {
     setupMesh(m_planeMesh, vertices, indices);
 }
 
+/**
+ * @brief Tworzy siatkę torusa
+ * @param radius Główny promień torusa
+ * @param tubeRadius Promień rury torusa
+ * @param sectors Liczba sektorów
+ * @param rings Liczba pierścieni
+ *
+ * @details Tworzy torus metodą parametryczną (dwa kąty).
+ * Torus jest podobny do obwarzanka lub dętki.
+ */
 void GeometryRenderer::createTorus(float radius, float tubeRadius, int sectors, int rings) {
     std::vector<Vertex> vertices;
     std::vector<unsigned int> indices;
@@ -371,6 +443,12 @@ void GeometryRenderer::createTorus(float radius, float tubeRadius, int sectors, 
     setupMesh(m_torusMesh, vertices, indices);
 }
 
+/**
+ * @brief Tworzy siatkę piramidy (ostrosłupa kwadratowego)
+ *
+ * @details Tworzy piramidę o podstawie kwadratowej i wysokości 1.
+ * Każda ściana boczna jest osobno triangulowana z poprawnymi normalnymi.
+ */
 void GeometryRenderer::createPyramid() {
     std::vector<Vertex> vertices;
     std::vector<unsigned int> indices;
@@ -419,9 +497,13 @@ void GeometryRenderer::createPyramid() {
     setupMesh(m_pyramidMesh, vertices, indices);
 }
 
-
-
-
+/**
+ * @brief Tworzy siatkę pomocniczej siatki 2D
+ * @param size Rozmiar siatki (liczba linii)
+ *
+ * @details Tworzy siatkę składającą się z linii poziomych i pionowych.
+ * Używana jako pomoc wizualna w scenach 3D.
+ */
 void GeometryRenderer::createGrid(int size) {
     std::vector<Vertex> vertices;
     std::vector<unsigned int> indices;
@@ -450,6 +532,12 @@ void GeometryRenderer::createGrid(int size) {
     setupMesh(m_gridMesh, vertices, indices);
 }
 
+/**
+ * @brief Rysuje sześcian z transformacją
+ * @param position Pozycja sześcianu
+ * @param scale Skala sześcianu
+ * @param rotation Rotacja sześcianu (kąty Eulera w stopniach)
+ */
 void GeometryRenderer::drawCube(const glm::vec3& position, const glm::vec3& scale, const glm::vec3& rotation) {
     glm::mat4 model = glm::mat4(1.0f);
     model = glm::translate(model, position);
@@ -467,6 +555,11 @@ void GeometryRenderer::drawCube(const glm::vec3& position, const glm::vec3& scal
     glBindVertexArray(0);
 }
 
+/**
+ * @brief Rysuje sferę
+ * @param position Pozycja środka sfery
+ * @param radius Promień sfery
+ */
 void GeometryRenderer::drawSphere(const glm::vec3& position, float radius) {
     glm::mat4 model = glm::mat4(1.0f);
     model = glm::translate(model, position);
@@ -480,6 +573,12 @@ void GeometryRenderer::drawSphere(const glm::vec3& position, float radius) {
     glBindVertexArray(0);
 }
 
+/**
+ * @brief Rysuje cylinder
+ * @param position Pozycja środka cylindra
+ * @param height Wysokość cylindra
+ * @param radius Promień cylindra
+ */
 void GeometryRenderer::drawCylinder(const glm::vec3& position, float height, float radius) {
     glm::mat4 model = glm::mat4(1.0f);
     model = glm::translate(model, position);
@@ -493,6 +592,12 @@ void GeometryRenderer::drawCylinder(const glm::vec3& position, float height, flo
     glBindVertexArray(0);
 }
 
+/**
+ * @brief Rysuje stożek
+ * @param position Pozycja środka stożka
+ * @param height Wysokość stożka
+ * @param radius Promień podstawy stożka
+ */
 void GeometryRenderer::drawCone(const glm::vec3& position, float height, float radius) {
     glm::mat4 model = glm::mat4(1.0f);
     model = glm::translate(model, position);
@@ -506,6 +611,11 @@ void GeometryRenderer::drawCone(const glm::vec3& position, float height, float r
     glBindVertexArray(0);
 }
 
+/**
+ * @brief Rysuje płaszczyznę
+ * @param position Pozycja środka płaszczyzny
+ * @param size Rozmiar płaszczyzny (szerokość, głębokość)
+ */
 void GeometryRenderer::drawPlane(const glm::vec3& position, const glm::vec2& size) {
     glm::mat4 model = glm::mat4(1.0f);
     model = glm::translate(model, position);
@@ -519,6 +629,12 @@ void GeometryRenderer::drawPlane(const glm::vec3& position, const glm::vec2& siz
     glBindVertexArray(0);
 }
 
+/**
+ * @brief Rysuje torus
+ * @param position Pozycja środka torusa
+ * @param majorRadius Główny promień torusa
+ * @param minorRadius Promień rury torusa
+ */
 void GeometryRenderer::drawTorus(const glm::vec3& position, float majorRadius, float minorRadius) {
     glm::mat4 model = glm::mat4(1.0f);
     model = glm::translate(model, position);
@@ -532,6 +648,12 @@ void GeometryRenderer::drawTorus(const glm::vec3& position, float majorRadius, f
     glBindVertexArray(0);
 }
 
+/**
+ * @brief Rysuje piramidę
+ * @param position Pozycja środka podstawy piramidy
+ * @param baseSize Rozmiar podstawy piramidy
+ * @param height Wysokość piramidy
+ */
 void GeometryRenderer::drawPyramid(const glm::vec3& position, float baseSize, float height) {
     glm::mat4 model = glm::mat4(1.0f);
     model = glm::translate(model, position);
@@ -545,6 +667,14 @@ void GeometryRenderer::drawPyramid(const glm::vec3& position, float baseSize, fl
     glBindVertexArray(0);
 }
 
+/**
+ * @brief Rysuje siatkę pomocniczą
+ * @param position Pozycja środka siatki
+ * @param size Rozmiar siatki (liczba komórek)
+ * @param spacing Odstęp między liniami siatki
+ *
+ * @details Tymczasowo zmienia tryb rysowania na GL_LINES, a następnie przywraca poprzedni.
+ */
 void GeometryRenderer::drawGrid(const glm::vec3& position, int size, float spacing) {
     glm::mat4 model = glm::mat4(1.0f);
     model = glm::translate(model, position);
@@ -565,6 +695,12 @@ void GeometryRenderer::drawGrid(const glm::vec3& position, int size, float spaci
     m_drawMode = prevMode;
 }
 
+/**
+ * @brief Rysuje linię pomiędzy dwoma punktami
+ * @param start Punkt początkowy linii
+ * @param end Punkt końcowy linii
+ * @param color Kolor linii (domyślnie biały)
+ */
 void GeometryRenderer::drawLine(const glm::vec3& start, const glm::vec3& end, const glm::vec3& color) {
     float vertices[] = {
         start.x, start.y, start.z,
@@ -583,6 +719,12 @@ void GeometryRenderer::drawLine(const glm::vec3& start, const glm::vec3& end, co
     glBindVertexArray(0);
 }
 
+/**
+ * @brief Rysuje punkt
+ * @param position Pozycja punktu
+ * @param size Rozmiar punktu (domyślnie 5.0)
+ * @param color Kolor punktu (domyślnie biały)
+ */
 void GeometryRenderer::drawPoint(const glm::vec3& position, float size, const glm::vec3& color) {
     float vertices[] = {position.x, position.y, position.z};
 
@@ -598,6 +740,12 @@ void GeometryRenderer::drawPoint(const glm::vec3& position, float size, const gl
     glBindVertexArray(0);
 }
 
+/**
+ * @brief Rysuje układ współrzędnych 3D
+ * @param length Długość osi (domyślnie 1.0)
+ *
+ * @details Rysuje osie X (czerwona), Y (zielona), Z (niebieska) ze strzałkami.
+ */
 void GeometryRenderer::drawCoordinateSystem(float length) {
     // Oś X (czerwona)
     setColor(glm::vec3(1.0f, 0.0f, 0.0f));
@@ -622,6 +770,12 @@ void GeometryRenderer::drawCoordinateSystem(float length) {
     drawArrow(glm::vec3(0.0f), glm::vec3(0.0f, 0.0f, length), length * 0.1f);
 }
 
+/**
+ * @brief Rysuje 3-wymiarową siatkę pomocniczą
+ * @param center Środek siatki
+ * @param size Rozmiar siatki (liczba komórek)
+ * @param spacing Odstęp między liniami siatki
+ */
 void GeometryRenderer::draw3DGrid(const glm::vec3& center, int size, float spacing) {
     int halfSize = size / 2;
 
@@ -639,6 +793,14 @@ void GeometryRenderer::draw3DGrid(const glm::vec3& center, int size, float spaci
     }
 }
 
+/**
+ * @brief Rysuje strzałkę
+ * @param start Punkt początkowy strzałki
+ * @param end Punkt końcowy strzałki
+ * @param headSize Rozmiar główki strzałki (domyślnie 0.1)
+ *
+ * @details Rysuje linię główną i trójkątną główkę strzałki.
+ */
 void GeometryRenderer::drawArrow(const glm::vec3& start, const glm::vec3& end, float headSize) {
     glm::vec3 direction = glm::normalize(end - start);
     glm::vec3 perpendicular = glm::vec3(-direction.z, 0.0f, direction.x);
@@ -655,6 +817,11 @@ void GeometryRenderer::drawArrow(const glm::vec3& start, const glm::vec3& end, f
     drawLine(end, head2);
 }
 
+/**
+ * @brief Rysuje prostopadłościan (kontur)
+ * @param min Minimalny punkt (lewy-dolny-tylny)
+ * @param max Maksymalny punkt (prawy-górny-przedni)
+ */
 void GeometryRenderer::drawBox(const glm::vec3& min, const glm::vec3& max) {
     glm::vec3 vertices[8] = {
         glm::vec3(min.x, min.y, min.z),
@@ -684,6 +851,12 @@ void GeometryRenderer::drawBox(const glm::vec3& min, const glm::vec3& max) {
     drawLine(vertices[3], vertices[7]);
 }
 
+/**
+ * @brief Rysuje szkielet sfery (wireframe)
+ * @param position Pozycja środka sfery
+ * @param radius Promień sfery
+ * @param segments Liczba segmentów (dokładność)
+ */
 void GeometryRenderer::drawSphereWireframe(const glm::vec3& position, float radius, int segments) {
     // Poziome okręgi
     for (int i = 0; i < segments; ++i) {
@@ -718,6 +891,11 @@ void GeometryRenderer::drawSphereWireframe(const glm::vec3& position, float radi
     }
 }
 
+/**
+ * @brief Rysuje wielokąt
+ * @param vertices Lista wierzchołków wielokąta
+ * @param filled Czy wypełnić wielokąt (domyślnie false)
+ */
 void GeometryRenderer::drawPolygon(const std::vector<glm::vec3>& vertices, bool filled) {
     if (vertices.size() < 3) return;
 
@@ -733,6 +911,12 @@ void GeometryRenderer::drawPolygon(const std::vector<glm::vec3>& vertices, bool 
     }
 }
 
+/**
+ * @brief Rysuje okrąg w płaszczyźnie XZ
+ * @param center Środek okręgu
+ * @param radius Promień okręgu
+ * @param segments Liczba segmentów (dokładność)
+ */
 void GeometryRenderer::drawCircle(const glm::vec3& center, float radius, int segments) {
     std::vector<glm::vec3> vertices;
 
@@ -750,6 +934,13 @@ void GeometryRenderer::drawCircle(const glm::vec3& center, float radius, int seg
     }
 }
 
+/**
+ * @brief Rysuje pierścień (dysk z otworem) w płaszczyźnie XZ
+ * @param center Środek pierścienia
+ * @param innerRadius Wewnętrzny promień
+ * @param outerRadius Zewnętrzny promień
+ * @param segments Liczba segmentów (dokładność)
+ */
 void GeometryRenderer::drawDisk(const glm::vec3& center, float innerRadius, float outerRadius, int segments) {
     for (int i = 0; i < segments; ++i) {
         float angle1 = 2.0f * PI * i / segments;
@@ -765,9 +956,28 @@ void GeometryRenderer::drawDisk(const glm::vec3& center, float innerRadius, floa
         drawLine(inner1, outer1);
     }
 }
+
+/**
+ * @brief Rysuje "harnas" (funkcja eksperymentalna)
+ * @param position Pozycja harnasa
+ * @param height Wysokość harnasa
+ * @param radius Promień harnasa
+ *
+ * @note Funkcja w budowie - obecnie pusta implementacja
+ */
 void GeometryRenderer::drawHarnas(const glm::vec3& position, float height, float radius) {
     //NAHHHHHHH BRU HB URUASNR
 }
+
+/**
+ * @brief Ustawia właściwości materiału
+ * @param ambient Składowa otoczenia
+ * @param diffuse Składowa rozproszenia
+ * @param specular Składowa odbicia
+ * @param shininess Współczynnik połysku
+ *
+ * @note Wymaga implementacji uniformów w shaderze
+ */
 void GeometryRenderer::setMaterial(const glm::vec3& ambient, const glm::vec3& diffuse, const glm::vec3& specular, float shininess) {
     m_currentMaterial.ambient = ambient;
     m_currentMaterial.diffuse = diffuse;
@@ -781,34 +991,58 @@ void GeometryRenderer::setMaterial(const glm::vec3& ambient, const glm::vec3& di
     // glUniform1f(shininessLoc, shininess);
 }
 
+/**
+ * @brief Ustawia kolor dla wszystkich składowych materiału
+ * @param color Kolor bazowy
+ *
+ * @details Ambient = 20% koloru, Diffuse = 100% koloru, Specular = 50% koloru
+ */
 void GeometryRenderer::setColor(const glm::vec3& color) {
     // Dla prostoty ustawiamy ten sam kolor dla wszystkich składników
     setMaterial(color * 0.2f, color, color * 0.5f, 32.0f);
 }
 
+/**
+ * @brief Ustawia tryb rysowania OpenGL
+ * @param mode Tryb rysowania (GL_TRIANGLES, GL_LINES, GL_POINTS itp.)
+ */
 void GeometryRenderer::setDrawMode(GLenum mode) {
     m_drawMode = mode;
 }
 
+/**
+ * @brief Ustawia macierz modelu (do implementacji w shaderze)
+ * @param model Macierz modelu
+ */
 void GeometryRenderer::setModelMatrix(const glm::mat4& model) {
     // Ustaw w shaderze
     // glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
 }
 
+/**
+ * @brief Ustawia macierz widoku (do implementacji w shaderze)
+ * @param view Macierz widoku
+ */
 void GeometryRenderer::setViewMatrix(const glm::mat4& view) {
     // Ustaw w shaderze
     // glUniformMatrix4fv(viewLoc, 1, GL_FALSE, glm::value_ptr(view));
 }
 
+/**
+ * @brief Ustawia macierz rzutowania (do implementacji w shaderze)
+ * @param projection Macierz rzutowania
+ */
 void GeometryRenderer::setProjectionMatrix(const glm::mat4& projection) {
     // Ustaw w shaderze
     // glUniformMatrix4fv(projectionLoc, 1, GL_FALSE, glm::value_ptr(projection));
 }
 
+/**
+ * @brief Rysuje dowolną siatkę Mesh
+ * @param mesh Referencja do siatki Mesh
+ */
 void GeometryRenderer::drawMesh(const Mesh& mesh) {
     glBindVertexArray(mesh.VAO);
     glDrawElements(m_drawMode, mesh.indexCount, GL_UNSIGNED_INT, 0);
     glBindVertexArray(0);
 }
-
-

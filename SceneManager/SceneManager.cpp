@@ -2,13 +2,24 @@
 #include "SceneManager.hpp"
 #include <iostream>
 
+/**
+ * @brief Constructs SceneManager with specified renderer.
+ * @param renderer Pointer to GeometryRenderer instance
+ */
 SceneManager::SceneManager(GeometryRenderer* renderer) : m_renderer(renderer) {
 }
 
+/**
+ * @brief Destructor that clears all objects.
+ */
 SceneManager::~SceneManager() {
     clear();
 }
 
+/**
+ * @brief Sets renderer for all objects.
+ * @param renderer Pointer to GeometryRenderer instance
+ */
 void SceneManager::setRenderer(GeometryRenderer* renderer) {
     m_renderer = renderer;
     for (auto& obj : m_objects) {
@@ -16,6 +27,9 @@ void SceneManager::setRenderer(GeometryRenderer* renderer) {
     }
 }
 
+/**
+ * @brief Creates a cube object with specified parameters.
+ */
 TransformableObject* SceneManager::createCube(const std::string& name,
                                               const glm::vec3& position,
                                               const glm::vec3& rotation,
@@ -36,6 +50,9 @@ TransformableObject* SceneManager::createCube(const std::string& name,
     return result;
 }
 
+/**
+ * @brief Creates a sphere object with specified parameters.
+ */
 TransformableObject* SceneManager::createSphere(const std::string& name,
                                                 const glm::vec3& position,
                                                 float radius,
@@ -53,6 +70,9 @@ TransformableObject* SceneManager::createSphere(const std::string& name,
     return result;
 }
 
+/**
+ * @brief Creates a cylinder object with specified parameters.
+ */
 TransformableObject* SceneManager::createCylinder(const std::string& name,
                                                   const glm::vec3& position,
                                                   float height,
@@ -71,6 +91,9 @@ TransformableObject* SceneManager::createCylinder(const std::string& name,
     return result;
 }
 
+/**
+ * @brief Creates a letter 'H' complex object with specified parameters.
+ */
 ComplexObjectWithTransform* SceneManager::createLetterH(const std::string& name,
                                                         const glm::vec3& position,
                                                         float width,
@@ -90,6 +113,9 @@ ComplexObjectWithTransform* SceneManager::createLetterH(const std::string& name,
     return result;
 }
 
+/**
+ * @brief Retrieves object by name.
+ */
 TransformableObject* SceneManager::getObject(const std::string& name) {
     auto it = m_namedObjects.find(name);
     if (it != m_namedObjects.end()) {
@@ -98,6 +124,9 @@ TransformableObject* SceneManager::getObject(const std::string& name) {
     return nullptr;
 }
 
+/**
+ * @brief Retrieves object by index.
+ */
 TransformableObject* SceneManager::getObject(size_t index) {
     if (index < m_objects.size()) {
         return m_objects[index].get();
@@ -105,13 +134,16 @@ TransformableObject* SceneManager::getObject(size_t index) {
     return nullptr;
 }
 
+/**
+ * @brief Removes object by name.
+ */
 void SceneManager::removeObject(const std::string& name) {
     auto it = m_namedObjects.find(name);
     if (it != m_namedObjects.end()) {
         TransformableObject* obj = it->second;
         m_namedObjects.erase(it);
 
-        // Znajdź i usuń z wektora
+        // Find and remove from vector
         for (auto vecIt = m_objects.begin(); vecIt != m_objects.end(); ++vecIt) {
             if (vecIt->get() == obj) {
                 m_objects.erase(vecIt);
@@ -121,11 +153,14 @@ void SceneManager::removeObject(const std::string& name) {
     }
 }
 
+/**
+ * @brief Removes object by index.
+ */
 void SceneManager::removeObject(size_t index) {
     if (index < m_objects.size()) {
         TransformableObject* obj = m_objects[index].get();
 
-        // Usuń z mapy nazwanych obiektów
+        // Remove from named objects map
         for (auto it = m_namedObjects.begin(); it != m_namedObjects.end(); ++it) {
             if (it->second == obj) {
                 m_namedObjects.erase(it);
@@ -137,35 +172,53 @@ void SceneManager::removeObject(size_t index) {
     }
 }
 
+/**
+ * @brief Clears all objects from scene.
+ */
 void SceneManager::clear() {
     m_objects.clear();
     m_namedObjects.clear();
 }
 
+/**
+ * @brief Draws all objects in scene.
+ */
 void SceneManager::drawAll() {
     for (auto& obj : m_objects) {
         obj->draw();
     }
 }
 
+/**
+ * @brief Translates all objects.
+ */
 void SceneManager::translateAll(const glm::vec3& translation, Space space) {
     for (auto& obj : m_objects) {
         obj->translate(translation, space);
     }
 }
 
+/**
+ * @brief Rotates all objects.
+ */
 void SceneManager::rotateAll(const glm::quat& rotation, Space space) {
     for (auto& obj : m_objects) {
         obj->rotate(rotation, space);
     }
 }
 
+/**
+ * @brief Scales all objects.
+ */
 void SceneManager::scaleAll(const glm::vec3& scaleFactor) {
     for (auto& obj : m_objects) {
         obj->scale(scaleFactor);
     }
 }
 
+/**
+ * @brief Generates unique name for object.
+ */
 std::string SceneManager::generateUniqueName(const std::string& base) {
     static int counter = 0;
     return base + "_" + std::to_string(counter++);

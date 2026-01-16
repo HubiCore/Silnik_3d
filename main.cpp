@@ -19,8 +19,12 @@
 #include <glm/gtc/type_ptr.hpp>
 #include <cmath>
 
-
-// Simple shader program with multiple lights
+/**
+ * @brief Vertex shader source for flat shading
+ * 
+ * Shader przetwarzający wierzchołki z atrybutami pozycji, normalnych i koordynatów tekstury.
+ * Wykorzystuje kwalifikator 'flat' dla normalnych, co daje efekt płaskiego cieniowania.
+ */
 const char* vertexShaderSourceFlat = R"(
 #version 330 core
 layout (location = 0) in vec3 aPos;
@@ -31,7 +35,7 @@ uniform mat4 model;
 uniform mat4 view;
 uniform mat4 projection;
 
-flat out vec3 Normal;
+flat out vec3 Normal;  // Kwalifikator 'flat' dla płaskiego cieniowania
 out vec3 FragPos;
 out vec2 TexCoord;
 
@@ -44,11 +48,17 @@ void main()
 }
 )";
 
+/**
+ * @brief Fragment shader source for flat shading
+ * 
+ * Shader implementujący model oświetlenia Phonga z obsługą wielu świateł.
+ * Wykorzystuje płaskie cieniowanie dzięki kwalifikatorowi 'flat' dla normalnych.
+ */
 const char* fragmentShaderSourceFlat = R"(
 #version 330 core
 out vec4 FragColor;
 
-flat in vec3 Normal;
+flat in vec3 Normal;  // Płaskie interpolowane normalne
 in vec3 FragPos;
 in vec2 TexCoord;
 
@@ -152,7 +162,11 @@ void main()
 }
 )";
 
-// Simple shader program with multiple lights
+/**
+ * @brief Vertex shader source for Phong shading
+ * 
+ * Standardowy shader wierzchołków dla modelu Phonga z interpolowanymi normalnymi.
+ */
 const char* vertexShaderSourcePhong = R"(
 #version 330 core
 layout (location = 0) in vec3 aPos;
@@ -163,7 +177,7 @@ uniform mat4 model;
 uniform mat4 view;
 uniform mat4 projection;
 
-out vec3 Normal;
+out vec3 Normal;  // Normalne interpolowane przez rasterizer
 out vec3 FragPos;
 out vec2 TexCoord;
 
@@ -176,11 +190,16 @@ void main()
 }
 )";
 
+/**
+ * @brief Fragment shader source for Phong shading
+ * 
+ * Shader implementujący model oświetlenia Phonga z gładko interpolowanymi normalnymi.
+ */
 const char* fragmentShaderSourcePhong = R"(
 #version 330 core
 out vec4 FragColor;
 
-in vec3 Normal;
+in vec3 Normal;  // Gładko interpolowane normalne
 in vec3 FragPos;
 in vec2 TexCoord;
 
@@ -284,82 +303,90 @@ void main()
 }
 )";
 
-static Engine* globalEngine = nullptr;
+static Engine* globalEngine = nullptr; ///< Wskaźnik do globalnej instancji silnika
 
-bool autoBackgroundChange = false;
-glm::vec4 currentBackgroundColor(0.1f, 0.1f, 0.1f, 1.0f);
+bool autoBackgroundChange = false; ///< Flaga automatycznej zmiany tła
+glm::vec4 currentBackgroundColor(0.1f, 0.1f, 0.1f, 1.0f); ///< Aktualny kolor tła
 
+// Obiekty teksturowane
+TexturedCube texturedCube;    ///< Teksturowany sześcian
+TexturedSphere texturedSphere; ///< Teksturowana kula
+TexturedCylinder texturedCylinder; ///< Teksturowany cylinder
 
+BitmapHandler textureSphere;  ///< Handler tekstury dla kuli
+BitmapHandler textureCylinder; ///< Handler tekstury dla cylindra
+BitmapHandler texture;        ///< Handler tekstury dla sześcianu
+bool useTextures = true;      ///< Flaga użycia tekstur
 
-//Texture
-TexturedCube texturedCube;
-TexturedSphere texturedSphere;
-TexturedCylinder texturedCylinder;
+// Shadery i tryby cieniowania
+GLuint shaderProgramFlat;     ///< Program shaderowy dla cieniowania płaskiego
+GLuint shaderProgramPhong;    ///< Program shaderowy dla cieniowania Phonga
+GLuint currentShaderProgram;  ///< Aktualnie używany program shaderowy
+bool flatShading = false;     ///< Flaga trybu cieniowania (false = PHONG, true = FLAT)
 
-BitmapHandler textureSphere; //tekstura dla kuli
-BitmapHandler textureCylinder; //tekstura dla cylindra
-BitmapHandler texture; //teksura dla sześcianu
-bool useTextures = true;
+// Kamera
+Camera camera(glm::vec3(0.0f, 2.0f, 13.0f)); ///< Główna kamera sceny
+bool firstMouse = true;       ///< Flaga pierwszego ruchu myszy
+float lastX = 400, lastY = 300; ///< Poprzednie pozycje myszy
 
-//cieniowanie
-GLuint shaderProgramFlat;    //FLAT
-GLuint shaderProgramPhong;   //PHONG
-GLuint currentShaderProgram; //Aktualnie używany
-bool flatShading = false;    //(false = PHONG, true = FLAT)
-
-// Camera
-Camera camera(glm::vec3(0.0f, 2.0f, 13.0f));
-bool firstMouse = true;
-float lastX = 400, lastY = 300;
-
-// Variables for camera control
-bool cameraEnabled = true;
-Camera::CameraType cameraType = Camera::FPS;
+// Kontrola kamery
+bool cameraEnabled = true;    ///< Flaga włączenia sterowania kamerą
+Camera::CameraType cameraType = Camera::FPS; ///< Typ kamery
 
 // Zmienne globalne dla animacji
-float rotationAngle = 0.0f;
-float cubeRotation = 0.0f;
-GeometryRenderer* geometryRenderer = nullptr;
-int renderMode = 0; // 0 = wszystkie kształty, 1 = tylko zadania z instrukcji
+float rotationAngle = 0.0f;   ///< Kąt rotacji dla animacji
+float cubeRotation = 0.0f;    ///< Rotacja sześcianu
+GeometryRenderer* geometryRenderer = nullptr; ///< Wskaźnik do renderera geometrii
+int renderMode = 0; ///< Tryb renderowania (0 = wszystkie kształty, 1 = tylko zadania z instrukcji)
 
-// Macierze
-glm::mat4 projection;
-glm::mat4 view;
-glm::mat4 model;
+// Macierze transformacji
+glm::mat4 projection; ///< Macierz projekcji
+glm::mat4 view;       ///< Macierz widoku
+glm::mat4 model;      ///< Macierz modelu
 
-// Oświetlenie - dwa źródła światła
+// Struktura reprezentująca światło
 struct Light {
-    glm::vec3 position;
-    glm::vec3 direction;
-    glm::vec3 color;
-    float ambientIntensity;
-    float diffuseIntensity;
-    float specularIntensity;
-    float constant;
-    float linear;
-    float quadratic;
-    float cutoff;
-    float outerCutoff;
-    int type; // 0 = punktowe, 1 = kierunkowe, 2 = stożkowe
+    glm::vec3 position;           ///< Pozycja światła
+    glm::vec3 direction;          ///< Kierunek światła (dla kierunkowego i stożkowego)
+    glm::vec3 color;              ///< Kolor światła
+    float ambientIntensity;       ///< Intensywność składowej ambient
+    float diffuseIntensity;       ///< Intensywność składowej diffuse
+    float specularIntensity;      ///< Intensywność składowej specular
+    float constant;               ///< Stały współczynnik tłumienia
+    float linear;                 ///< Liniowy współczynnik tłumienia
+    float quadratic;              ///< Kwadratowy współczynnik tłumienia
+    float cutoff;                 ///< Kąt wewnętrzny stożka światła
+    float outerCutoff;            ///< Kąt zewnętrzny stożka światła
+    int type;                     ///< Typ światła (0 = punktowe, 1 = kierunkowe, 2 = stożkowe)
 };
 
-Light lights[8]; // Maksymalnie 8 świateł jak w OpenGL
-int activeLightCount = 2; // Aktywnych 2 światła
-int currentLightMode = 2; // 0 = tylko pierwsze, 1 = tylko drugie, 2 = wszystkie
-glm::vec3 viewPos(0.0f, 3.0f, 8.0f);
+Light lights[8];                 ///< Tablica świateł (maksymalnie 8)
+int activeLightCount = 2;        ///< Liczba aktywnych świateł
+int currentLightMode = 2;        ///< Tryb oświetlenia (0 = tylko pierwsze, 1 = tylko drugie, 2 = wszystkie)
+glm::vec3 viewPos(0.0f, 3.0f, 8.0f); ///< Pozycja obserwatora (kamera)
 
-// Zmienne globalne dla nowego systemu transformacji
-SceneManager* sceneManager = nullptr;
-TransformableObject* rotatingCube = nullptr;
-TransformableObject* rotatecylinder = nullptr;
-TransformableObject* orbitingSphere = nullptr;
-ComplexObjectWithTransform* letterHObject = nullptr;
-TransformableObject* wagonik1 = nullptr;
-TransformableObject* wagonik2 = nullptr;
-TransformableObject* wagonik3 = nullptr;
-TransformableObject* wagonik4 = nullptr;
+// Obiekty transformowalne
+SceneManager* sceneManager = nullptr; ///< Menadżer sceny
+TransformableObject* rotatingCube = nullptr; ///< Obracający się sześcian
+TransformableObject* rotatecylinder = nullptr; ///< Obracający się cylinder
+TransformableObject* orbitingSphere = nullptr; ///< Orbitująca kula
+ComplexObjectWithTransform* letterHObject = nullptr; ///< Litera H jako złożony obiekt
+TransformableObject* wagonik1 = nullptr; ///< Pierwszy wagonik (rodzic)
+TransformableObject* wagonik2 = nullptr; ///< Drugi wagonik (dziecko)
+TransformableObject* wagonik3 = nullptr; ///< Trzeci wagonik (dziecko)
+TransformableObject* wagonik4 = nullptr; ///< Czwarty wagonik (dziecko)
 
-// Callback klawiatury
+/**
+ * @brief Callback klawiatury
+ * 
+ * Obsługuje wszystkie zdarzenia klawiatury w aplikacji.
+ * 
+ * @param window Okno GLFW
+ * @param key Kod klawisza
+ * @param scancode Kod skanowania klawisza
+ * @param action Akcja (naciśnięcie, zwolnienie)
+ * @param mods Modyfikatory (Ctrl, Shift, Alt)
+ */
 void keyCallback(GLFWwindow* window, int key, int scancode, int action, int mods) {
     if (key == GLFW_KEY_ESCAPE && action == GLFW_PRESS) {
         glfwSetWindowShouldClose(window, GLFW_TRUE);
@@ -379,7 +406,7 @@ void keyCallback(GLFWwindow* window, int key, int scancode, int action, int mods
                 std::cout << "Kolor tla: Czarny" << std::endl;
                 break;
             case 2:
-                currentBackgroundColor = glm::vec4(1.0f,    1.0f, 1.0f, 1.0f);
+                currentBackgroundColor = glm::vec4(1.0f, 1.0f, 1.0f, 1.0f);
                 std::cout << "Kolor tla: Bialy" << std::endl;
                 break;
             case 3:
@@ -463,6 +490,7 @@ void keyCallback(GLFWwindow* window, int key, int scancode, int action, int mods
         glfwGetFramebufferSize(window, &width, &height);
         glViewport(0, 0, width, height);
     }
+    
     if (key == GLFW_KEY_G && action == GLFW_PRESS) {
         flatShading = !flatShading;
         currentShaderProgram = flatShading ? shaderProgramFlat : shaderProgramPhong;
@@ -473,6 +501,7 @@ void keyCallback(GLFWwindow* window, int key, int scancode, int action, int mods
             std::cout<<"Tryb cienowania phong\n";
         }
     }
+    
     if (key == GLFW_KEY_T && action == GLFW_PRESS) {
         cameraType = static_cast<Camera::CameraType>((cameraType + 1) % 3);
         camera.setType(cameraType);
@@ -561,7 +590,7 @@ void keyCallback(GLFWwindow* window, int key, int scancode, int action, int mods
     }
 
     if (key == GLFW_KEY_R && action == GLFW_PRESS && mods & GLFW_MOD_CONTROL) {
-
+        // Ctrl+R - można dodać funkcjonalność resetu
     }
 
     if (key == GLFW_KEY_H && action == GLFW_PRESS) {
@@ -617,7 +646,15 @@ void keyCallback(GLFWwindow* window, int key, int scancode, int action, int mods
     }
 }
 
-// Callback myszy
+/**
+ * @brief Callback ruchu myszy
+ * 
+ * Obsługuje zdarzenia ruchu myszy dla sterowania kamerą.
+ * 
+ * @param window Okno GLFW
+ * @param xpos Pozycja X kursora
+ * @param ypos Pozycja Y kursora
+ */
 void mouseCallback(GLFWwindow* window, double xpos, double ypos) {
     static bool firstMouseCall = true;
 
@@ -638,13 +675,30 @@ void mouseCallback(GLFWwindow* window, double xpos, double ypos) {
     camera.processMouseMovement(xoffset, yoffset);
 }
 
-// Callback scrolla myszy
+/**
+ * @brief Callback scrolla myszy
+ * 
+ * Obsługuje zdarzenia scrolla myszy dla zmiany zoomu kamery.
+ * 
+ * @param window Okno GLFW
+ * @param xoffset Przesunięcie X scrolla
+ * @param yoffset Przesunięcie Y scrolla
+ */
 void scrollCallback(GLFWwindow* window, double xoffset, double yoffset) {
     if (!cameraEnabled) return;
     camera.processMouseScroll(yoffset);
 }
 
-// Callback przycisku myszy
+/**
+ * @brief Callback przycisków myszy
+ * 
+ * Obsługuje zdarzenia przycisków myszy.
+ * 
+ * @param window Okno GLFW
+ * @param button Kod przycisku myszy
+ * @param action Akcja (naciśnięcie, zwolnienie)
+ * @param mods Modyfikatory
+ */
 void mouseButtonCallback(GLFWwindow* window, int button, int action, int mods) {
     if (button == GLFW_MOUSE_BUTTON_LEFT && action == GLFW_PRESS) {
         std::cout << "Lewy przycisk myszy nacisniety" << std::endl;
@@ -675,13 +729,27 @@ void mouseButtonCallback(GLFWwindow* window, int button, int action, int mods) {
     }
 }
 
-// Callback zmiany rozmiaru okna
+/**
+ * @brief Callback zmiany rozmiaru okna
+ * 
+ * Obsługuje zdarzenia zmiany rozmiaru okna aplikacji.
+ * 
+ * @param window Okno GLFW
+ * @param width Nowa szerokość okna
+ * @param height Nowa wysokość okna
+ */
 void resizeCallback(GLFWwindow* window, int width, int height) {
     std::cout << "Rozmiar okna zmieniony na: " << width << "x" << height << std::endl;
     glViewport(0, 0, width, height);
 }
 
-// Funkcja kompilacji shadera
+/**
+ * @brief Kompiluje shader OpenGL
+ * 
+ * @param type Typ shadera (GL_VERTEX_SHADER lub GL_FRAGMENT_SHADER)
+ * @param source Kod źródłowy shadera
+ * @return GLuint ID skompilowanego shadera
+ */
 GLuint compileShader(GLenum type, const char* source) {
     GLuint shader = glCreateShader(type);
     glShaderSource(shader, 1, &source, NULL);
@@ -699,7 +767,11 @@ GLuint compileShader(GLenum type, const char* source) {
     return shader;
 }
 
-// Utworz program shaderowy
+/**
+ * @brief Tworzy i linkuje programy shaderowe
+ * 
+ * Tworzy dwa programy shaderowe: dla trybu FLAT i PHONG.
+ */
 void createShaderProgram() {
     // Kompilacja shaderów dla trybu FLAT
     GLuint vertexShaderFlat = compileShader(GL_VERTEX_SHADER, vertexShaderSourceFlat);
@@ -730,7 +802,11 @@ void createShaderProgram() {
     glDeleteShader(fragmentShaderPhong);
 }
 
-// Inicjalizacja świateł
+/**
+ * @brief Inicjalizuje światła w scenie
+ * 
+ * Konfiguruje dwa źródła światła z różnymi parametrami.
+ */
 void initializeLights() {
     // Pierwsze światło - punktowe (jak w oryginalnym kodzie)
     lights[0].position = glm::vec3(5.0f, 5.0f, 5.0f);
@@ -761,12 +837,18 @@ void initializeLights() {
     lights[1].type = 1; // kierunkowe
 }
 
-// Funkcja aktualizacji
+/**
+ * @brief Funkcja aktualizacji logiki aplikacji
+ * 
+ * Wywoływana co klatkę, aktualizuje stan wszystkich obiektów w scenie.
+ * 
+ * @param engine Referencja do silnika gry
+ */
 void update(Engine& engine) {
-
     static float timeAccumulator = 0.0f;
     timeAccumulator += engine.getDeltaTime();
 
+    // Automatyczna zmiana koloru tła
     if (autoBackgroundChange) {
         float time = glfwGetTime();
         float r = 0.5f + 0.5f * sin(time);
@@ -849,7 +931,11 @@ void update(Engine& engine) {
     }
 }
 
-
+/**
+ * @brief Funkcja renderowania sceny
+ * 
+ * Wywoływana co klatkę, renderuje wszystkie obiekty w scenie.
+ */
 void render() {
     if (!geometryRenderer) return;
 
@@ -920,7 +1006,7 @@ void render() {
         texturedCube.draw();
     }
 
-    //Rysowanie teksturowanej kuli
+    // Rysowanie teksturowanej kuli
     model = texturedSphere.getModelMatrix();
     glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
     glUniform3f(objectColorLoc, 1.0f, 1.0f, 1.0f);
@@ -933,7 +1019,7 @@ void render() {
         texturedSphere.draw();
     }
 
-    //Rysowanie teksturowanego cylindra
+    // Rysowanie teksturowanego cylindra
     model = texturedCylinder.getModelMatrix();
     glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
     glUniform3f(objectColorLoc, 1.0f, 1.0f, 1.0f);
@@ -1031,6 +1117,13 @@ void render() {
     geometryRenderer->setDrawMode(GL_TRIANGLES);
 }
 
+/**
+ * @brief Główna funkcja programu
+ * 
+ * Inicjalizuje aplikację, konfiguruje scenę i uruchamia główną pętlę gry.
+ * 
+ * @return int Kod wyjścia programu
+ */
 int main() {
     std::cout << "=== SILNIK 3D ===" << std::endl;
     std::cout << "\nInicjalizacja..." << std::endl;
@@ -1038,6 +1131,7 @@ int main() {
     // Utworzenie silnika
     Engine engine(800, 600, 60, false);
     globalEngine = &engine;
+    
     // Inicjalizacja silnika
     if (!engine.initialize()) {
         std::cerr << "Nie udalo sie zainicjalizowac silnika!" << std::endl;

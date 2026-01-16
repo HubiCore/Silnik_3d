@@ -16,7 +16,14 @@
 #include <chrono>
 #include <thread>
 
-// Implementacje funkcji wrapper
+/**
+ * @brief Wrapper callbacku klawiatury dla GLFW
+ * @param window Okno GLFW
+ * @param key Kod klawisza
+ * @param scancode Kod skanowania klawisza
+ * @param action Akcja (naciśnięcie, zwolnienie, przytrzymanie)
+ * @param mods Modyfikatory (Shift, Ctrl, Alt)
+ */
 void keyCallbackWrapper(GLFWwindow* window, int key, int scancode, int action, int mods) {
     void* userPointer = glfwGetWindowUserPointer(window);
     if (userPointer) {
@@ -25,6 +32,12 @@ void keyCallbackWrapper(GLFWwindow* window, int key, int scancode, int action, i
     }
 }
 
+/**
+ * @brief Wrapper callbacku ruchu myszy dla GLFW
+ * @param window Okno GLFW
+ * @param xpos Pozycja X kursora
+ * @param ypos Pozycja Y kursora
+ */
 void mouseMoveCallbackWrapper(GLFWwindow* window, double xpos, double ypos) {
     void* userPointer = glfwGetWindowUserPointer(window);
     if (userPointer) {
@@ -33,6 +46,13 @@ void mouseMoveCallbackWrapper(GLFWwindow* window, double xpos, double ypos) {
     }
 }
 
+/**
+ * @brief Wrapper callbacku przycisków myszy dla GLFW
+ * @param window Okno GLFW
+ * @param button Przycisk myszy
+ * @param action Akcja (naciśnięcie, zwolnienie)
+ * @param mods Modyfikatory (Shift, Ctrl, Alt)
+ */
 void mouseButtonCallbackWrapper(GLFWwindow* window, int button, int action, int mods) {
     void* userPointer = glfwGetWindowUserPointer(window);
     if (userPointer) {
@@ -41,6 +61,12 @@ void mouseButtonCallbackWrapper(GLFWwindow* window, int button, int action, int 
     }
 }
 
+/**
+ * @brief Wrapper callbacku zmiany rozmiaru okna dla GLFW
+ * @param window Okno GLFW
+ * @param width Nowa szerokość okna
+ * @param height Nowa wysokość okna
+ */
 void resizeCallbackWrapper(GLFWwindow* window, int width, int height) {
     void* userPointer = glfwGetWindowUserPointer(window);
     if (userPointer) {
@@ -50,7 +76,13 @@ void resizeCallbackWrapper(GLFWwindow* window, int width, int height) {
     glViewport(0, 0, width, height);
 }
 
-// Konstruktor
+/**
+ * @brief Konstruktor silnika
+ * @param width Szerokość okna
+ * @param height Wysokość okna
+ * @param fps Docelowa liczba klatek na sekundę
+ * @param fullscreen Czy uruchomić w trybie pełnoekranowym
+ */
 Engine::Engine(int width, int height, int fps, bool fullscreen)
     : m_resX(width), m_resY(height), m_targetFPS(fps),
       m_isFullscreen(fullscreen), m_isRunning(false),
@@ -68,12 +100,19 @@ Engine::Engine(int width, int height, int fps, bool fullscreen)
     m_clearColor[3] = 1.0f;
 }
 
-// Destruktor
+/**
+ * @brief Destruktor silnika
+ *
+ * Zamyka okno i zwalnia zasoby GLFW
+ */
 Engine::~Engine() {
     close();
 }
 
-// Inicjalizacja GLFW
+/**
+ * @brief Inicjalizacja biblioteki GLFW
+ * @return true jeśli inicjalizacja się powiodła, false w przeciwnym razie
+ */
 bool Engine::initializeGLFW() {
     if (!glfwInit()) {
         std::cerr << "Blad: Nie udalo sie zainicjalizowac GLFW!" << std::endl;
@@ -95,7 +134,10 @@ bool Engine::initializeGLFW() {
     return true;
 }
 
-// Tworzenie okna
+/**
+ * @brief Tworzy okno GLFW
+ * @return true jeśli tworzenie się powiodło, false w przeciwnym razie
+ */
 bool Engine::createWindow() {
     m_monitor = glfwGetPrimaryMonitor();
     m_videoMode = glfwGetVideoMode(m_monitor);
@@ -137,7 +179,9 @@ bool Engine::createWindow() {
     return true;
 }
 
-// Ustawienie callbackow
+/**
+ * @brief Konfiguruje callbacki dla okna GLFW
+ */
 void Engine::setupCallbacks() {
     glfwSetWindowUserPointer(m_window, this);
     glfwSetKeyCallback(m_window, keyCallbackWrapper);
@@ -146,7 +190,9 @@ void Engine::setupCallbacks() {
     glfwSetFramebufferSizeCallback(m_window, resizeCallbackWrapper);
 }
 
-// Konfiguracja OpenGL
+/**
+ * @brief Konfiguruje ustawienia OpenGL
+ */
 void Engine::setupOpenGL() {
     // Ustawienie koloru czyszczenia
     glClearColor(m_clearColor[0], m_clearColor[1], m_clearColor[2], m_clearColor[3]);
@@ -166,7 +212,10 @@ void Engine::setupOpenGL() {
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 }
 
-// Glowna inicjalizacja
+/**
+ * @brief Inicjalizuje silnik
+ * @return true jeśli inicjalizacja się powiodła, false w przeciwnym razie
+ */
 bool Engine::initialize() {
     if (!initializeGLFW()) {
         return false;
@@ -190,7 +239,15 @@ bool Engine::initialize() {
     return true;
 }
 
-// Glowna petla gry
+/**
+ * @brief Uruchamia główną pętlę silnika
+ * @param updateCallback Funkcja callback do aktualizacji logiki
+ * @param renderCallback Funkcja callback do renderowania
+ *
+ * @details Pętla główna zarządza czasem, wywołuje callbacki, czyści ekran,
+ * stosuje rzutowanie, zamienia bufory i obsługuje zdarzenia.
+ * Implementuje kontrolę FPS z usypianiem wątku.
+ */
 void Engine::run(std::function<void()> updateCallback, std::function<void()> renderCallback) {
     if (!m_window || !m_isRunning) return;
 
@@ -238,7 +295,9 @@ void Engine::run(std::function<void()> updateCallback, std::function<void()> ren
     close();
 }
 
-// Zamkniecie silnika
+/**
+ * @brief Zamyka silnik i zwalnia zasoby
+ */
 void Engine::close() {
     m_isRunning = false;
 
@@ -252,7 +311,10 @@ void Engine::close() {
     std::cout << "GLFW zakonczone" << std::endl;
 }
 
-// Ustawienie trybu pelnoekranowego
+/**
+ * @brief Przełącza tryb pełnoekranowy
+ * @param fullscreen true dla pełnego ekranu, false dla okna
+ */
 void Engine::setFullscreen(bool fullscreen) {
     if (fullscreen == m_isFullscreen || !m_window) return;
 
@@ -273,7 +335,11 @@ void Engine::setFullscreen(bool fullscreen) {
     }
 }
 
-// Zmiana rozdzielczosci
+/**
+ * @brief Zmienia rozdzielczość okna
+ * @param width Nowa szerokość
+ * @param height Nowa wysokość
+ */
 void Engine::setResolution(int width, int height) {
     if (!m_window) return;
 
@@ -288,13 +354,21 @@ void Engine::setResolution(int width, int height) {
     }
 }
 
-// Ustawienie docelowego FPS
+/**
+ * @brief Ustawia docelową liczbę klatek na sekundę
+ * @param fps Docelowe FPS
+ */
 void Engine::setFPS(int fps) {
     m_targetFPS = fps;
     m_frameTimeTarget = 1.0 / fps;
 }
 
-// Wlaczenie/wylaczenie podwojnego buforowania
+/**
+ * @brief Włącza lub wyłącza podwójne buforowanie
+ * @param enable true aby włączyć, false aby wyłączyć
+ *
+ * @note Zmiana tego ustawienia wymaga ponownego utworzenia okna
+ */
 void Engine::enableDoubleBuffering(bool enable) {
     m_enableDoubleBuffering = enable;
     if (m_window) {
@@ -303,7 +377,10 @@ void Engine::enableDoubleBuffering(bool enable) {
     }
 }
 
-// Wlaczenie/wylaczenie bufora glebokosci
+/**
+ * @brief Włącza lub wyłącza bufor głębokości
+ * @param enable true aby włączyć, false aby wyłączyć
+ */
 void Engine::enableDepthBuffer(bool enable) {
     m_enableDepthBuffer = enable;
     if (m_window) {
@@ -315,27 +392,45 @@ void Engine::enableDepthBuffer(bool enable) {
     }
 }
 
-// Ustawienie callbacka klawiatury
+/**
+ * @brief Ustawia callback dla klawiatury
+ * @param callback Funkcja callback
+ */
 void Engine::setKeyCallback(std::function<void(GLFWwindow*, int, int, int, int)> callback) {
     m_keyCallback = callback;
 }
 
-// Ustawienie callbacka ruchu myszy
+/**
+ * @brief Ustawia callback dla ruchu myszy
+ * @param callback Funkcja callback
+ */
 void Engine::setMouseMoveCallback(std::function<void(GLFWwindow*, double, double)> callback) {
     m_mouseMoveCallback = callback;
 }
 
-// Ustawienie callbacka przyciskow myszy
+/**
+ * @brief Ustawia callback dla przycisków myszy
+ * @param callback Funkcja callback
+ */
 void Engine::setMouseButtonCallback(std::function<void(GLFWwindow*, int, int, int)> callback) {
     m_mouseButtonCallback = callback;
 }
 
-// Ustawienie callbacka zmiany rozmiaru okna
+/**
+ * @brief Ustawia callback dla zmiany rozmiaru okna
+ * @param callback Funkcja callback
+ */
 void Engine::setResizeCallback(std::function<void(GLFWwindow*, int, int)> callback) {
     m_resizeCallback = callback;
 }
 
-// Ustawienie koloru czyszczenia
+/**
+ * @brief Ustawia kolor czyszczenia ekranu
+ * @param r Składowa czerwona (0.0 - 1.0)
+ * @param g Składowa zielona (0.0 - 1.0)
+ * @param b Składowa niebieska (0.0 - 1.0)
+ * @param a Składowa alpha (0.0 - 1.0, domyślnie 1.0)
+ */
 void Engine::setClearColor(float r, float g, float b, float a) {
     m_clearColor[0] = r;
     m_clearColor[1] = g;
@@ -344,7 +439,9 @@ void Engine::setClearColor(float r, float g, float b, float a) {
     glClearColor(r, g, b, a);
 }
 
-// Czyszczenie ekranu
+/**
+ * @brief Czyści ekran (bufor kolorów i głębokości)
+ */
 void Engine::clearScreen() {
     GLbitfield mask = GL_COLOR_BUFFER_BIT;
     if (m_enableDepthBuffer) {
@@ -353,7 +450,12 @@ void Engine::clearScreen() {
     glClear(mask);
 }
 
-// Ustawienie rzutowania perspektywicznego
+/**
+ * @brief Ustawia rzutowanie perspektywiczne
+ * @param fov Pole widzenia w stopniach (domyślnie 45.0)
+ * @param near Bliska płaszczyzna przycinania (domyślnie 0.1)
+ * @param far Daleka płaszczyzna przycinania (domyślnie 100.0)
+ */
 void Engine::setPerspectiveProjection(float fov, float near, float far) {
     m_projectionMode = ProjectionMode::PERSPECTIVE;
     m_fov = fov;
@@ -361,46 +463,75 @@ void Engine::setPerspectiveProjection(float fov, float near, float far) {
     m_farPlane = far;
 }
 
-// Ustawienie rzutowania ortograficznego
+/**
+ * @brief Ustawia rzutowanie ortograficzne
+ * @param left Lewa granica widoku
+ * @param right Prawa granica widoku
+ * @param bottom Dolna granica widoku
+ * @param top Górna granica widoku
+ * @param near Bliska płaszczyzna przycinania (domyślnie -1.0)
+ * @param far Daleka płaszczyzna przycinania (domyślnie 1.0)
+ */
 void Engine::setOrthographicProjection(float left, float right, float bottom, float top, float near, float far) {
     m_projectionMode = ProjectionMode::ORTHOGRAPHIC;
     m_nearPlane = near;
     m_farPlane = far;
 }
 
-// Zastosowanie rzutowania
+/**
+ * @brief Zastosowuje aktualne ustawienia rzutowania
+ *
+ * @note Ta metoda wymaga implementacji zarządzania macierzami.
+ * W obecnej implementacji jest pusta.
+ */
 void Engine::applyProjection() {
     // Tymczasowo puste - implementacja zalezy od tego, jak zarzadzasz macierzami
 }
 
-// Sprawdzenie, czy okno powinno zostac zamkniete
+/**
+ * @brief Sprawdza, czy okno powinno zostać zamknięte
+ * @return true jeśli okno powinno zostać zamknięte
+ */
 bool Engine::shouldClose() const {
     return glfwWindowShouldClose(m_window) || !m_isRunning;
 }
 
-// Pobranie wskaznika do okna
+/**
+ * @brief Zwraca wskaźnik do okna GLFW
+ * @return Wskaźnik do okna GLFW
+ */
 GLFWwindow* Engine::getWindow() const {
     return m_window;
 }
 
-// Zamiana buforow
+/**
+ * @brief Zamienia bufory (podwójne buforowanie)
+ */
 void Engine::swapBuffers() {
     glfwSwapBuffers(m_window);
 }
 
-// Obsluga zdarzen
+/**
+ * @brief Obsługuje zdarzenia GLFW
+ */
 void Engine::pollEvents() {
     glfwPollEvents();
 }
 
-// Ustawienie trybu kursora
+/**
+ * @brief Ustawia tryb kursora myszy
+ * @param mode Tryb kursora (GLFW_CURSOR_NORMAL, GLFW_CURSOR_HIDDEN, GLFW_CURSOR_DISABLED)
+ */
 void Engine::setCursorMode(int mode) {
     if (m_window) {
         glfwSetInputMode(m_window, GLFW_CURSOR, mode);
     }
 }
 
-// Wlaczenie/wylaczenie obslugi myszy
+/**
+ * @brief Włącza lub wyłącza obsługę myszy
+ * @param enable true aby włączyć, false aby wyłączyć
+ */
 void Engine::enableMouseInput(bool enable) {
     if (m_window) {
         glfwSetInputMode(m_window, GLFW_CURSOR,
@@ -408,7 +539,10 @@ void Engine::enableMouseInput(bool enable) {
     }
 }
 
-// Pobranie czasu
+/**
+ * @brief Zwraca aktualny czas GLFW
+ * @return Aktualny czas w sekundach
+ */
 double Engine::getTime() const {
     return glfwGetTime();
 }

@@ -4,17 +4,32 @@
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
 
+/**
+ * @brief Konstruktor TexturedObject
+ *
+ * Inicjalizuje identyfikatory buforów jako 0 oraz ustawia domyślne transformacje.
+ */
 TexturedObject::TexturedObject()
     : m_VAO(0), m_VBO(0), m_EBO(0), m_textureID(0),
       m_vertexCount(0), m_indexCount(0),
       m_position(0.0f), m_rotation(0.0f), m_scale(1.0f) {}
 
+/**
+ * @brief Destruktor TexturedObject
+ *
+ * Zwalnia zasoby OpenGL jeśli zostały przydzielone.
+ */
 TexturedObject::~TexturedObject() {
     if (m_VAO != 0) glDeleteVertexArrays(1, &m_VAO);
     if (m_VBO != 0) glDeleteBuffers(1, &m_VBO);
     if (m_EBO != 0) glDeleteBuffers(1, &m_EBO);
 }
 
+/**
+ * @brief Ładuje teksturę z pliku
+ * @param filePath Ścieżka do pliku tekstury
+ * @return true jeśli ładowanie się powiodło, false w przeciwnym razie
+ */
 bool TexturedObject::loadTexture(const std::string& filePath) {
     m_texture = std::make_shared<BitmapHandler>();
     if (m_texture->loadTexture(filePath)) {
@@ -24,6 +39,10 @@ bool TexturedObject::loadTexture(const std::string& filePath) {
     return false;
 }
 
+/**
+ * @brief Ustawia wstępnie załadowaną teksturę
+ * @param texture Wskaźnik do handlera tekstury
+ */
 void TexturedObject::setTexture(std::shared_ptr<BitmapHandler> texture) {
     m_texture = texture;
     if (texture) {
@@ -33,30 +52,58 @@ void TexturedObject::setTexture(std::shared_ptr<BitmapHandler> texture) {
     }
 }
 
+/**
+ * @brief Ustawia pozycję obiektu
+ * @param position Nowa pozycja w przestrzeni 3D
+ */
 void TexturedObject::setPosition(const glm::vec3& position) {
     m_position = position;
 }
 
+/**
+ * @brief Ustawia rotację obiektu
+ * @param rotation Kąty Eulera w stopniach (X, Y, Z)
+ */
 void TexturedObject::setRotation(const glm::vec3& rotation) {
     m_rotation = rotation;
 }
 
+/**
+ * @brief Ustawia skalę obiektu
+ * @param scale Współczynniki skali dla każdej osi
+ */
 void TexturedObject::setScale(const glm::vec3& scale) {
     m_scale = scale;
 }
 
+/**
+ * @brief Przesuwa obiekt o podany wektor
+ * @param translation Wektor translacji
+ */
 void TexturedObject::translate(const glm::vec3& translation) {
     m_position += translation;
 }
 
+/**
+ * @brief Obraca obiekt o podane kąty
+ * @param rotation Kąty obrotu w stopniach (X, Y, Z)
+ */
 void TexturedObject::rotate(const glm::vec3& rotation) {
     m_rotation += rotation;
 }
 
+/**
+ * @brief Skaluje obiekt o podane współczynniki
+ * @param scale Współczynniki skali dla każdej osi
+ */
 void TexturedObject::scale(const glm::vec3& scale) {
     m_scale *= scale;
 }
 
+/**
+ * @brief Tworzy macierz modelu dla obiektu
+ * @return Macierz 4x4 reprezentująca transformację modelu
+ */
 glm::mat4 TexturedObject::getModelMatrix() const {
     glm::mat4 model = glm::mat4(1.0f);
     model = glm::translate(model, m_position);
@@ -67,9 +114,12 @@ glm::mat4 TexturedObject::getModelMatrix() const {
     return model;
 }
 
+/**
+ * @brief Renderuje obiekt bez wiązania tekstury
+ */
 void TexturedObject::draw() const {
     if (m_VAO == 0) return;
-    
+
     glBindVertexArray(m_VAO);
     if (m_indexCount > 0) {
         glDrawElements(GL_TRIANGLES, m_indexCount, GL_UNSIGNED_INT, 0);
@@ -79,6 +129,9 @@ void TexturedObject::draw() const {
     glBindVertexArray(0);
 }
 
+/**
+ * @brief Renderuje obiekt z automatycznym wiązaniem tekstury
+ */
 void TexturedObject::drawWithTexture() const {
     if (m_texture) {
         m_texture->bind(GL_TEXTURE0);
@@ -90,10 +143,23 @@ void TexturedObject::drawWithTexture() const {
 // TexturedCube Implementation
 // ============================================
 
+/**
+ * @brief Konstruktor TexturedCube
+ */
 TexturedCube::TexturedCube() : TexturedObject() {}
 
+/**
+ * @brief Destruktor TexturedCube
+ */
 TexturedCube::~TexturedCube() {}
 
+/**
+ * @brief Tworzy geometrię sześcianu
+ * @param size Rozmiar sześcianu (długość krawędzi)
+ *
+ * Tworzy 24 wierzchołki (4 na każdą ścianę) i 36 indeksów (12 trójkątów).
+ * Każdy wierzchołek zawiera pozycję, normalną i koordynaty tekstury.
+ */
 void TexturedCube::create(float size) {
     float halfSize = size / 2.0f;
 
@@ -187,6 +253,11 @@ void TexturedCube::create(float size) {
               << m_indexCount << " indeksów)" << std::endl;
 }
 
+/**
+ * @brief Implementacja konfiguracji buforów dla sześcianu
+ *
+ * Metoda jest już zaimplementowana w create(), więc pozostaje pusta.
+ */
 void TexturedCube::setupBuffers() {
     // Już zaimplementowane w create()
 }
@@ -195,10 +266,25 @@ void TexturedCube::setupBuffers() {
 // TexturedSphere Implementation
 // ============================================
 
+/**
+ * @brief Konstruktor TexturedSphere
+ */
 TexturedSphere::TexturedSphere() : TexturedObject() {}
 
+/**
+ * @brief Destruktor TexturedSphere
+ */
 TexturedSphere::~TexturedSphere() {}
 
+/**
+ * @brief Tworzy geometrię sfery
+ * @param radius Promień sfery
+ * @param sectors Liczba sektorów (podział poziomy)
+ * @param stacks Liczba warstw (podział pionowy)
+ *
+ * Generuje sferę za pomocą parametrycznych równań sferycznych.
+ * Koordynaty tekstury są mapowane parametrycznie.
+ */
 void TexturedSphere::create(float radius, int sectors, int stacks) {
     std::vector<Vertex> vertices;
     std::vector<unsigned int> indices;
@@ -298,6 +384,11 @@ void TexturedSphere::create(float radius, int sectors, int stacks) {
               << m_indexCount << " indeksów" << std::endl;
 }
 
+/**
+ * @brief Implementacja konfiguracji buforów dla sfery
+ *
+ * Wywołuje create() z domyślnymi parametrami.
+ */
 void TexturedSphere::setupBuffers() {
     create(); // Tworzy domyślną kulę
 }
@@ -306,10 +397,25 @@ void TexturedSphere::setupBuffers() {
 // TexturedCylinder Implementation
 // ============================================
 
+/**
+ * @brief Konstruktor TexturedCylinder
+ */
 TexturedCylinder::TexturedCylinder() : TexturedObject() {}
 
+/**
+ * @brief Destruktor TexturedCylinder
+ */
 TexturedCylinder::~TexturedCylinder() {}
 
+/**
+ * @brief Tworzy geometrię cylindra
+ * @param radius Promień podstawy
+ * @param height Wysokość cylindra
+ * @param sectors Liczba sektorów (podział okręgu)
+ *
+ * Tworzy cylinder z trzema częściami: górna podstawa, dolna podstawa
+ * i ściana boczna. Każda część ma osobne normalne i koordynaty tekstury.
+ */
 void TexturedCylinder::create(float radius, float height, int sectors) {
     std::vector<Vertex> vertices;
     std::vector<unsigned int> indices;
@@ -435,6 +541,11 @@ void TexturedCylinder::create(float radius, float height, int sectors) {
               << m_indexCount << " indeksów" << std::endl;
 }
 
+/**
+ * @brief Implementacja konfiguracji buforów dla cylindra
+ *
+ * Wywołuje create() z domyślnymi parametrami.
+ */
 void TexturedCylinder::setupBuffers() {
     create(); // Tworzy domyślny cylinder
 }

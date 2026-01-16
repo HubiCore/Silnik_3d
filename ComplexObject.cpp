@@ -4,6 +4,11 @@
 #include <iostream>
 #include <cmath>
 
+/**
+ * @brief Konstruktor domyślny ComplexObject
+ *
+ * Inicjalizuje pozycję, skalę, rotację i liczniki, zeruje identyfikatory OpenGL
+ */
 ComplexObject::ComplexObject()
     : position(0.0f), scale(1.0f), rotation(0.0f), vertexCount(0), triangleCount(0) {
     mesh.VAO = 0;
@@ -12,10 +17,27 @@ ComplexObject::ComplexObject()
     mesh.indexCount = 0;
 }
 
+/**
+ * @brief Destruktor ComplexObject
+ *
+ * Zwalnia zasoby graficzne (VAO, VBO, EBO) poprzez wywołanie deleteMesh()
+ */
 ComplexObject::~ComplexObject() {
     deleteMesh();
 }
 
+/**
+ * @brief Tworzy literę H z trzech cylindrów
+ * @param width Szerokość litery H
+ * @param height Wysokość litery H
+ * @param depth Głębokość litery H
+ * @param color Kolor litery H
+ *
+ * @details Tworzy literę H składającą się z trzech cylindrów:
+ * 1. Lewy pionowy cylinder
+ * 2. Poziomy cylinder środkowy (obrócony o 90 stopni)
+ * 3. Prawy pionowy cylinder
+ */
 void ComplexObject::createLetterH(float width, float height, float depth, const glm::vec3& color) {
     std::vector<Vertex> vertices;
     std::vector<unsigned int> indices;
@@ -49,7 +71,22 @@ void ComplexObject::createLetterH(float width, float height, float depth, const 
 
 }
 
-
+/**
+ * @brief Dodaje cylinder do obiektu
+ * @param vertices Referencja do wektora wierzchołków (będzie modyfikowany)
+ * @param indices Referencja do wektora indeksów (będzie modyfikowany)
+ * @param position Pozycja cylindra
+ * @param height Wysokość cylindra
+ * @param radius Promień cylindra
+ * @param color Kolor cylindra
+ * @param rotationAngle Kąt obrotu cylindra wokół osi Z (w stopniach)
+ * @param sectors Liczba sektorów (dokładność przybliżenia cylindra)
+ *
+ * @details Generuje wierzchołki i indeksy dla cylindra składającego się z:
+ * - Dwóch podstaw (górnej i dolnej)
+ * - Bocznej ściany
+ * Każdy cylinder jest transformowany zgodnie z podaną pozycją, rotacją i skalą
+ */
 void ComplexObject::addCylinder(std::vector<Vertex>& vertices, std::vector<unsigned int>& indices,
                                const glm::vec3& position, float height, float radius,
                                const glm::vec3& color, float rotationAngle, int sectors) {
@@ -150,6 +187,14 @@ void ComplexObject::addCylinder(std::vector<Vertex>& vertices, std::vector<unsig
     }
 }
 
+/**
+ * @brief Konfiguruje siatkę 3D z podanych wierzchołków i indeksów
+ * @param vertices Wektor wierzchołków
+ * @param indices Wektor indeksów
+ *
+ * @details Tworzy VAO, VBO i EBO w OpenGL, przesyła dane do GPU
+ * i konfiguruje atrybuty wierzchołków (pozycja, normalna, UV)
+ */
 void ComplexObject::setupMesh(const std::vector<Vertex>& vertices, const std::vector<unsigned int>& indices) {
     deleteMesh();
 
@@ -182,6 +227,9 @@ void ComplexObject::setupMesh(const std::vector<Vertex>& vertices, const std::ve
     mesh.indexCount = static_cast<int>(indices.size());
 }
 
+/**
+ * @brief Usuwa zasoby siatki 3D (VAO, VBO, EBO)
+ */
 void ComplexObject::deleteMesh() {
     if (mesh.VAO) {
         glDeleteVertexArrays(1, &mesh.VAO);
@@ -192,6 +240,12 @@ void ComplexObject::deleteMesh() {
     }
 }
 
+/**
+ * @brief Rysuje złożony obiekt
+ *
+ * @details Używa VAO i EBO do narysowania obiektu za pomocą glDrawElements
+ * Jeśli siatka nie jest zainicjalizowana, wypisuje błąd
+ */
 void ComplexObject::draw() const {
     if (mesh.VAO == 0 || mesh.indexCount == 0) {
         std::cerr << "Błąd: Jeśli to czytasz to zainicjalizuj litere H w main.cpp" << std::endl;
@@ -203,10 +257,31 @@ void ComplexObject::draw() const {
     glBindVertexArray(0);
 }
 
+/**
+ * @brief Ustawia pozycję obiektu
+ * @param pos Nowa pozycja obiektu
+ */
 void ComplexObject::setPosition(const glm::vec3& pos) { position = pos; }
+
+/**
+ * @brief Ustawia skalę obiektu
+ * @param scl Nowa skala obiektu
+ */
 void ComplexObject::setScale(const glm::vec3& scl) { scale = scl; }
+
+/**
+ * @brief Ustawia rotację obiektu
+ * @param rot Nowa rotacja obiektu (kąty Eulera w stopniach)
+ */
 void ComplexObject::setRotation(const glm::vec3& rot) { rotation = rot; }
 
+/**
+ * @brief Zwraca macierz modelu obiektu
+ * @return Macierz transformacji modelu
+ *
+ * @details Tworzy macierz modelu na podstawie pozycji, rotacji i skali
+ * Kolejność transformacji: translacja -> obrót (Z, Y, X) -> skalowanie
+ */
 glm::mat4 ComplexObject::getModelMatrix() const {
     glm::mat4 model = glm::mat4(1.0f);
     model = glm::translate(model, position);
