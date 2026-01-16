@@ -735,7 +735,7 @@ void initializeLights() {
     // Pierwsze światło - punktowe (jak w oryginalnym kodzie)
     lights[0].position = glm::vec3(5.0f, 5.0f, 5.0f);
     lights[0].direction = glm::vec3(0.0f, -1.0f, 0.0f);
-    lights[0].color = glm::vec3(0.0f, 1.0f, 0.0f);
+    lights[0].color = glm::vec3(1.0f, 1.0f, 1.0f);
     lights[0].ambientIntensity = 0.1f;
     lights[0].diffuseIntensity = 0.8f;
     lights[0].specularIntensity = 0.5f;
