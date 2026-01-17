@@ -20,8 +20,65 @@
 #include <cmath>
 
 /**
+@mainpage Silnik 3D - Dokumentacja
+
+@tableofcontents
+
+@section sec_overview Przegląd projektu
+
+**Silnik 3D** to aplikacja grafiki komputerowej napisana w C++ z wykorzystaniem bibliotek OpenGL i GLM.
+Projekt demonstruje zaawansowane techniki renderowania 3D, w tym:
+
+- Obsługa klawiatury i myszy
+- Zmienna szybkość odświeżania
+- Rysowanie prymitywów (3D)
+- Obsługa kamery
+- Hierarchia klas
+- Obsługa transformacji geometrycznych na prymitywach
+- Oświetlenie (można dodać obsługę przycisku, który wyłącza i włącza oświetlenie)
+- Cieniowanie (można dodać obsługę przycisku, który wyłącza i włącza cieniowanie)
+- Teksturowanie obiektów
+- Demo technologiczne (do obrony)
+- Sprawozdanie i dokumentacja
+
+@subsection sec_overview Autorzy:
+- Andrzej Raumiagi
+- Hubert Stojek
+- Hubert Wilczyński
+
+@section sec_features Funkcjonalności
+- **Renderowanie 3D**: Zaawansowane techniki renderowania z użyciem OpenGL
+- **System kamery**: Swobodne poruszanie się po scenie 3D
+- **Oświetlenie**: Implementacja różnych modeli oświetlenia
+- **Teksturowanie**: Wczytywanie i nakładanie tekstur na obiekty
+- **Interakcja**: Pełna obsługa klawiatury i myszy
+- **Transformacje**: Skalowanie, obracanie i przesuwanie obiektów
+
+@section sec_requirements Wymagania systemowe
+- System operacyjny: Windows 10/11, Linux
+- Kompilator wspierający C++17
+- Karta graficzna z obsługą OpenGL 4.6
+- Biblioteki: GLFW, GLAD, GLM
+
+@section sec_usage Szybki start
+1. Sklonuj repozytorium projektu
+2. Zainstaluj wymagane zależności
+3. Wygeneruj pliki build przy użyciu CMake
+4. Skompiluj projekt
+5. Uruchom plik wykonywalny
+
+@section sec_links Przydatne linki
+- [Repozytorium GitHub](https://github.com/przyklad/silnik3d)
+- [Dokumentacja OpenGL](https://www.khronos.org/opengl/)
+- [Dokumentacja GLM](https://glm.g-truc.net/)
+
+@author Andrzej Raumiagi, Hubert Stojek, Hubert Wilczyński
+@date 20.01.2026
+@version 1.0.0
+*/
+/**
  * @brief Vertex shader source for flat shading
- * 
+ *
  * Shader przetwarzający wierzchołki z atrybutami pozycji, normalnych i koordynatów tekstury.
  * Wykorzystuje kwalifikator 'flat' dla normalnych, co daje efekt płaskiego cieniowania.
  */
@@ -50,7 +107,7 @@ void main()
 
 /**
  * @brief Fragment shader source for flat shading
- * 
+ *
  * Shader implementujący model oświetlenia Phonga z obsługą wielu świateł.
  * Wykorzystuje płaskie cieniowanie dzięki kwalifikatorowi 'flat' dla normalnych.
  */
@@ -164,7 +221,7 @@ void main()
 
 /**
  * @brief Vertex shader source for Phong shading
- * 
+ *
  * Standardowy shader wierzchołków dla modelu Phonga z interpolowanymi normalnymi.
  */
 const char* vertexShaderSourcePhong = R"(
@@ -192,7 +249,7 @@ void main()
 
 /**
  * @brief Fragment shader source for Phong shading
- * 
+ *
  * Shader implementujący model oświetlenia Phonga z gładko interpolowanymi normalnymi.
  */
 const char* fragmentShaderSourcePhong = R"(
@@ -378,9 +435,9 @@ TransformableObject* wagonik4 = nullptr; ///< Czwarty wagonik (dziecko)
 
 /**
  * @brief Callback klawiatury
- * 
+ *
  * Obsługuje wszystkie zdarzenia klawiatury w aplikacji.
- * 
+ *
  * @param window Okno GLFW
  * @param key Kod klawisza
  * @param scancode Kod skanowania klawisza
@@ -490,7 +547,7 @@ void keyCallback(GLFWwindow* window, int key, int scancode, int action, int mods
         glfwGetFramebufferSize(window, &width, &height);
         glViewport(0, 0, width, height);
     }
-    
+
     if (key == GLFW_KEY_G && action == GLFW_PRESS) {
         flatShading = !flatShading;
         currentShaderProgram = flatShading ? shaderProgramFlat : shaderProgramPhong;
@@ -501,7 +558,7 @@ void keyCallback(GLFWwindow* window, int key, int scancode, int action, int mods
             std::cout<<"Tryb cienowania phong\n";
         }
     }
-    
+
     if (key == GLFW_KEY_T && action == GLFW_PRESS) {
         cameraType = static_cast<Camera::CameraType>((cameraType + 1) % 3);
         camera.setType(cameraType);
@@ -648,9 +705,9 @@ void keyCallback(GLFWwindow* window, int key, int scancode, int action, int mods
 
 /**
  * @brief Callback ruchu myszy
- * 
+ *
  * Obsługuje zdarzenia ruchu myszy dla sterowania kamerą.
- * 
+ *
  * @param window Okno GLFW
  * @param xpos Pozycja X kursora
  * @param ypos Pozycja Y kursora
@@ -677,9 +734,9 @@ void mouseCallback(GLFWwindow* window, double xpos, double ypos) {
 
 /**
  * @brief Callback scrolla myszy
- * 
+ *
  * Obsługuje zdarzenia scrolla myszy dla zmiany zoomu kamery.
- * 
+ *
  * @param window Okno GLFW
  * @param xoffset Przesunięcie X scrolla
  * @param yoffset Przesunięcie Y scrolla
@@ -691,9 +748,9 @@ void scrollCallback(GLFWwindow* window, double xoffset, double yoffset) {
 
 /**
  * @brief Callback przycisków myszy
- * 
+ *
  * Obsługuje zdarzenia przycisków myszy.
- * 
+ *
  * @param window Okno GLFW
  * @param button Kod przycisku myszy
  * @param action Akcja (naciśnięcie, zwolnienie)
@@ -731,9 +788,9 @@ void mouseButtonCallback(GLFWwindow* window, int button, int action, int mods) {
 
 /**
  * @brief Callback zmiany rozmiaru okna
- * 
+ *
  * Obsługuje zdarzenia zmiany rozmiaru okna aplikacji.
- * 
+ *
  * @param window Okno GLFW
  * @param width Nowa szerokość okna
  * @param height Nowa wysokość okna
@@ -745,7 +802,7 @@ void resizeCallback(GLFWwindow* window, int width, int height) {
 
 /**
  * @brief Kompiluje shader OpenGL
- * 
+ *
  * @param type Typ shadera (GL_VERTEX_SHADER lub GL_FRAGMENT_SHADER)
  * @param source Kod źródłowy shadera
  * @return GLuint ID skompilowanego shadera
@@ -769,7 +826,7 @@ GLuint compileShader(GLenum type, const char* source) {
 
 /**
  * @brief Tworzy i linkuje programy shaderowe
- * 
+ *
  * Tworzy dwa programy shaderowe: dla trybu FLAT i PHONG.
  */
 void createShaderProgram() {
@@ -804,7 +861,7 @@ void createShaderProgram() {
 
 /**
  * @brief Inicjalizuje światła w scenie
- * 
+ *
  * Konfiguruje dwa źródła światła z różnymi parametrami.
  */
 void initializeLights() {
@@ -839,9 +896,9 @@ void initializeLights() {
 
 /**
  * @brief Funkcja aktualizacji logiki aplikacji
- * 
+ *
  * Wywoływana co klatkę, aktualizuje stan wszystkich obiektów w scenie.
- * 
+ *
  * @param engine Referencja do silnika gry
  */
 void update(Engine& engine) {
@@ -933,7 +990,7 @@ void update(Engine& engine) {
 
 /**
  * @brief Funkcja renderowania sceny
- * 
+ *
  * Wywoływana co klatkę, renderuje wszystkie obiekty w scenie.
  */
 void render() {
@@ -1119,9 +1176,9 @@ void render() {
 
 /**
  * @brief Główna funkcja programu
- * 
+ *
  * Inicjalizuje aplikację, konfiguruje scenę i uruchamia główną pętlę gry.
- * 
+ *
  * @return int Kod wyjścia programu
  */
 int main() {
