@@ -41,11 +41,6 @@ Projekt demonstruje zaawansowane techniki renderowania 3D, w tym:
 - Demo technologiczne (do obrony)
 - Sprawozdanie i dokumentacja
 
-@subsection sec_overview Autorzy:
-- Andrzej Raumiagi
-- Hubert Stojek
-- Hubert Wilczyński
-
 @section sec_features Funkcjonalności
 - **Renderowanie 3D**: Zaawansowane techniki renderowania z użyciem OpenGL
 - **System kamery**: Swobodne poruszanie się po scenie 3D
