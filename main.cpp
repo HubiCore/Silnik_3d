@@ -106,6 +106,52 @@ void main()
  * Shader implementujący model oświetlenia Phonga z obsługą wielu świateł.
  * Wykorzystuje płaskie cieniowanie dzięki kwalifikatorowi 'flat' dla normalnych.
  */
+/**
+ * @struct Light
+ * @brief Reprezentuje źródło światła w scenie 3D.
+ *
+ * Struktura definiuje wszystkie parametry potrzebne do obliczenia oświetlenia
+ * w modelu Phonga. Obsługuje trzy typy świateł: punktowe, kierunkowe i stożkowe.
+ *
+ * @var Light::position
+ * Pozycja światła w przestrzeni 3D (dla świateł punktowych i stożkowych).
+ *
+ * @var Light::direction
+ * Kierunek światła (dla świateł kierunkowych i stożkowych).
+ *
+ * @var Light::color
+ * Kolor światła w postaci wektora RGB (wartości od 0.0 do 1.0).
+ *
+ * @var Light::ambientIntensity
+ * Intensywność składowej ambient (światła otoczenia).
+ *
+ * @var Light::diffuseIntensity
+ * Intensywność składowej diffuse (światła rozproszonego).
+ *
+ * @var Light::specularIntensity
+ * Intensywność składowej specular (światła odbitego).
+ *
+ * @var Light::constant
+ * Stały współczynnik tłumienia światła (dla świateł punktowych i stożkowych).
+ *
+ * @var Light::linear
+ * Liniowy współczynnik tłumienia światła (dla świateł punktowych i stożkowych).
+ *
+ * @var Light::quadratic
+ * Kwadratowy współczynnik tłumienia światła (dla świateł punktowych i stożkowych).
+ *
+ * @var Light::cutoff
+ * Kąt wewnętrzny stożka światła (w radianach, dla świateł stożkowych).
+ *
+ * @var Light::outerCutoff
+ * Kąt zewnętrzny stożka światła (w radianach, dla świateł stożkowych).
+ *
+ * @var Light::type
+ * Typ światła:
+ * - 0 = punktowe (point light)
+ * - 1 = kierunkowe (directional light)
+ * - 2 = stożkowe (spot light)
+ */
 const char* fragmentShaderSourceFlat = R"(
 #version 330 core
 out vec4 FragColor;
