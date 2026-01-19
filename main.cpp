@@ -53,7 +53,7 @@ Projekt demonstruje zaawansowane techniki renderowania 3D, w tym:
 - System operacyjny: Windows 10/11, Linux
 - Kompilator wspierający C++17
 - Karta graficzna z obsługą OpenGL 4.6
-- Biblioteki: GLFW, GLAD, GLM
+- Biblioteki: GLFW, GLEW, GLM, STB
 
 @section sec_usage Szybki start
 1. Sklonuj repozytorium projektu
